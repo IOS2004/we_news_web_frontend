@@ -1,0 +1,126 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: #f5f7fa;
+    color: #2c3e50;
+    font-family: "Inter", system-ui, sans-serif;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: "Poppins", sans-serif;
+  }
+}
+
+@layer components {
+  /* Button Variants */
+  .btn {
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    outline: none;
+  }
+
+  .btn:focus {
+    box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.5);
+  }
+
+  .btn-primary {
+    background-color: #ff6b35;
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background-color: #e65428;
+  }
+
+  .btn-secondary {
+    background-color: #2c3e50;
+    color: white;
+  }
+
+  .btn-secondary:hover {
+    background-color: #1a252f;
+  }
+
+  .btn-outline {
+    border: 2px solid #ff6b35;
+    color: #ff6b35;
+  }
+
+  .btn-outline:hover {
+    background-color: #ff6b35;
+    color: white;
+  }
+
+  /* Card */
+  .card {
+    background-color: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    padding: 1.5rem;
+    transition: box-shadow 0.2s;
+  }
+
+  .card-hover:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  }
+
+  /* Input */
+  .input {
+    width: 100%;
+    padding: 0.5rem 1rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    outline: none;
+  }
+
+  .input:focus {
+    box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.5);
+    border-color: transparent;
+  }
+
+  /* Badge */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.125rem 0.625rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+
+  .badge-success {
+    background-color: #d1fae5;
+    color: #065f46;
+  }
+
+  .badge-warning {
+    background-color: #fef3c7;
+    color: #92400e;
+  }
+
+  .badge-danger {
+    background-color: #fee2e2;
+    color: #991b1b;
+  }
+
+  .badge-info {
+    background-color: #dbeafe;
+    color: #1e40af;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
