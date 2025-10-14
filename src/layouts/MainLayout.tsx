@@ -1,4 +1,4 @@
-import { Outlet, NavLink } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWallet } from '@/contexts/WalletContext';
 import { formatCurrency } from '@/utils/helpers';
@@ -11,13 +11,16 @@ import {
   Settings, 
   LogOut,
   Menu,
-  X
+  X,
+  User,
+  ArrowDownToLine
 } from 'lucide-react';
 import { useState } from 'react';
 
 export default function MainLayout() {
   const { user, logout } = useAuth();
   const { wallet } = useWallet();
+  const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const navigation = [
@@ -26,6 +29,8 @@ export default function MainLayout() {
     { name: 'Trading', to: '/trading', icon: TrendingUp },
     { name: 'Wallet', to: '/wallet', icon: Wallet },
     { name: 'Network', to: '/network', icon: Users },
+    { name: 'Withdrawals', to: '/withdrawals', icon: ArrowDownToLine },
+    { name: 'Profile', to: '/profile', icon: User },
   ];
 
   return (
@@ -63,25 +68,33 @@ export default function MainLayout() {
             <h1 className="text-2xl font-display font-bold text-primary">WeNews</h1>
           </div>
 
-          {/* User info */}
+          {/* User info - Clickable to navigate to profile */}
           <div className="p-4 border-b border-gray-200 mt-16 lg:mt-0">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-semibold">
-                {user?.firstName?.charAt(0)}
-                {user?.lastName?.charAt(0)}
+            <button
+              onClick={() => {
+                navigate('/profile');
+                setIsSidebarOpen(false);
+              }}
+              className="w-full text-left hover:bg-gray-50 rounded-lg p-2 transition-colors"
+            >
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white flex items-center justify-center font-semibold text-sm shadow-md">
+                  {user?.firstName?.charAt(0)}
+                  {user?.lastName?.charAt(0)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-text-primary truncate">
+                    {user?.firstName} {user?.lastName}
+                  </p>
+                  <p className="text-xs text-text-secondary truncate">{user?.email}</p>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-text-primary truncate">
-                  {user?.firstName} {user?.lastName}
-                </p>
-                <p className="text-xs text-text-secondary truncate">{user?.email}</p>
-              </div>
-            </div>
+            </button>
             
             {wallet && (
-              <div className="mt-3 p-2 bg-primary/10 rounded-lg">
+              <div className="mt-3 p-2 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border border-green-200">
                 <p className="text-xs text-text-secondary">Wallet Balance</p>
-                <p className="text-lg font-bold text-primary">{formatCurrency(wallet.balance)}</p>
+                <p className="text-lg font-bold text-green-600">{formatCurrency(wallet.balance)}</p>
               </div>
             )}
           </div>

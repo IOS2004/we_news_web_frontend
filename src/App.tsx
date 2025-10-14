@@ -15,8 +15,10 @@ import Dashboard from './pages/Dashboard'
 import News from './pages/News'
 import NewsDetail from './pages/NewsDetail'
 import Trading from './pages/Trading'
+import NumberTrading from './pages/NumberTrading'
 import Wallet from './pages/Wallet'
 import Profile from './pages/Profile'
+import EditProfile from './pages/EditProfile'
 import Network from './pages/Network'
 import Plans from './pages/Plans'
 import Settings from './pages/Settings'
@@ -46,8 +48,10 @@ function App() {
             <Route path="/news" element={<News />} />
             <Route path="/news/:id" element={<NewsDetail />} />
             <Route path="/trading" element={<Trading />} />
+            <Route path="/trading/number" element={<NumberTrading />} />
             <Route path="/wallet" element={<Wallet />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/edit-profile" element={<EditProfile />} />
             <Route path="/network" element={<Network />} />
             <Route path="/plans" element={<Plans />} />
             <Route path="/settings" element={<Settings />} />
