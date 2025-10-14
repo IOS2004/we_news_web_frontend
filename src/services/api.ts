@@ -5,7 +5,7 @@ import type { ApiResponse } from "@/types";
 // Create axios instance
 const api: AxiosInstance = axios.create({
   baseURL: config.apiBaseUrl,
-  timeout: 30000,
+  timeout: 60000, // Increased to 60 seconds for slow Render.com cold starts
   headers: {
     "Content-Type": "application/json",
   },
@@ -42,11 +42,21 @@ api.interceptors.response.use(
     }
 
     // Extract error message
-    const message =
+    let message =
       error.response?.data?.message ||
       error.response?.data?.error ||
       error.message ||
       "An unexpected error occurred";
+
+    // Add helpful message for timeout errors
+    if (error.code === 'ECONNABORTED' || message.includes('timeout')) {
+      message = "Server is taking too long to respond. The backend may be starting up (this can take 30-60 seconds on free hosting). Please try again.";
+    }
+
+    // Add helpful message for network errors
+    if (error.code === 'ERR_NETWORK' || !error.response) {
+      message = "Cannot connect to server. Please check your internet connection or try again later.";
+    }
 
     return Promise.reject(new Error(message));
   }

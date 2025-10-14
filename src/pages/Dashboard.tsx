@@ -18,14 +18,38 @@ export default function Dashboard() {
 
   const loadData = async () => {
     try {
-      // Load both stats and wallet data
-      const [statsData] = await Promise.all([
-        dashboardService.getDashboardStats(),
-        refreshWallet()
-      ]);
-      setStats(statsData);
+      // Load wallet data first
+      await refreshWallet();
+      
+      // Try to load stats, but don't fail if it doesn't work
+      try {
+        const statsData = await dashboardService.getDashboardStats();
+        setStats(statsData);
+      } catch (statsError) {
+        console.log('Stats not available, using defaults:', statsError);
+        // Use default stats if API fails
+        setStats({
+          totalEarnings: 0,
+          todayEarnings: 0,
+          walletBalance: 0,
+          totalReferrals: 0,
+          activeInvestments: 0,
+          newsRead: 0,
+          tradingProfit: 0,
+        });
+      }
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
+      // Set default stats on complete failure
+      setStats({
+        totalEarnings: 0,
+        todayEarnings: 0,
+        walletBalance: 0,
+        totalReferrals: 0,
+        activeInvestments: 0,
+        newsRead: 0,
+        tradingProfit: 0,
+      });
     } finally {
       setIsLoading(false);
     }
