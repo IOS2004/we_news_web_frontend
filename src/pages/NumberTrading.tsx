@@ -13,16 +13,9 @@ interface Plan {
   label: string;
 }
 
-interface Color {
-  id: string;
-  name: string;
-  color: string;
-  textColor: string;
-}
-
 interface Bet {
   id: string;
-  colorId: string;
+  number: number;
   amount: number;
   timestamp: number;
 }
@@ -32,13 +25,13 @@ interface GameRound {
   startTime: number;
   endTime: number;
   bettingEndTime: number;
-  winningColor?: string;
+  winningNumber?: number;
   status: 'betting' | 'drawing' | 'finished';
 }
 
 // Constants
 const ROUND_DURATION = 3 * 60 * 1000; // 3 minutes
-const BETTING_DURATION = 2.5 * 60 * 1000; // 2.5 minutes (betting closes 30 sec before round ends)
+const BETTING_DURATION = 2.5 * 60 * 1000; // 2.5 minutes
 
 const plans: Plan[] = [
   { id: '1', amount: 10, label: '₹10' },
@@ -47,25 +40,13 @@ const plans: Plan[] = [
   { id: '4', amount: 100, label: '₹100' },
 ];
 
-const colors: Color[] = [
-  { id: 'red', name: 'Red', color: '#DC2626', textColor: 'white' },
-  { id: 'blue', name: 'Blue', color: '#2563EB', textColor: 'white' },
-  { id: 'green', name: 'Green', color: '#16A34A', textColor: 'white' },
-  { id: 'yellow', name: 'Yellow', color: '#EAB308', textColor: 'black' },
-  { id: 'orange', name: 'Orange', color: '#EA580C', textColor: 'white' },
-  { id: 'purple', name: 'Purple', color: '#9333EA', textColor: 'white' },
-  { id: 'black', name: 'Black', color: '#374151', textColor: 'white' },
-  { id: 'white', name: 'White', color: '#F3F4F6', textColor: 'black' },
-  { id: 'brown', name: 'Brown', color: '#92400E', textColor: 'white' },
-  { id: 'pink', name: 'Pink', color: '#EC4899', textColor: 'white' },
-  { id: 'cyan', name: 'Cyan', color: '#0891B2', textColor: 'white' },
-  { id: 'grey', name: 'Grey', color: '#6B7280', textColor: 'white' },
-];
+// Generate numbers 0-100
+const numbers = Array.from({ length: 101 }, (_, i) => i);
 
-export default function Trading() {
+export default function NumberTrading() {
   const { wallet, refreshWallet } = useWallet();
   const [selectedPlan, setSelectedPlan] = useState<Plan>(plans[0]);
-  const [selectedColors, setSelectedColors] = useState<string[]>([]);
+  const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
   const [currentRound, setCurrentRound] = useState<GameRound | null>(null);
   const [timeLeft, setTimeLeft] = useState(0);
   const [bets, setBets] = useState<Bet[]>([]);
@@ -73,12 +54,11 @@ export default function Trading() {
 
   // Initialize game round
   useEffect(() => {
-    document.title = 'Color Trading - WeNews';
+    document.title = 'Number Trading - WeNews';
     refreshWallet();
     initializeRound();
   }, []);
 
-  // Initialize a new round
   const initializeRound = () => {
     const now = Date.now();
     const newRound: GameRound = {
@@ -91,7 +71,7 @@ export default function Trading() {
     setCurrentRound(newRound);
     setTimeLeft(ROUND_DURATION);
     setBets([]);
-    setSelectedColors([]);
+    setSelectedNumbers([]);
   };
 
   // Timer countdown
@@ -103,12 +83,10 @@ export default function Trading() {
       const remaining = currentRound.endTime - now;
 
       if (remaining <= 0) {
-        // Round finished - draw winner
         if (currentRound.status !== 'finished') {
           drawWinner();
         }
       } else if (now >= currentRound.bettingEndTime && currentRound.status === 'betting') {
-        // Betting closed - waiting for result
         setCurrentRound({ ...currentRound, status: 'drawing' });
         setTimeLeft(remaining);
       } else {
@@ -123,28 +101,28 @@ export default function Trading() {
   const drawWinner = () => {
     if (!currentRound) return;
 
-    // Select random winning color
-    const winningColor = colors[Math.floor(Math.random() * colors.length)];
+    // Generate random winning number (0-100)
+    const winningNumber = Math.floor(Math.random() * 101);
     
     const finishedRound: GameRound = {
       ...currentRound,
       status: 'finished',
-      winningColor: winningColor.id,
+      winningNumber,
     };
     
     setCurrentRound(finishedRound);
     
     // Calculate winnings
-    const winningBets = bets.filter(bet => bet.colorId === winningColor.id);
+    const winningBets = bets.filter(bet => bet.number === winningNumber);
     const totalWinnings = winningBets.reduce((sum, bet) => sum + (bet.amount * 2), 0);
     
     if (totalWinnings > 0) {
-      toast.success(`🎉 You won ${formatCurrency(totalWinnings)}! Winning color: ${winningColor.name}`, {
+      toast.success(`🎉 You won ${formatCurrency(totalWinnings)}! Winning number: ${winningNumber}`, {
         duration: 5000,
       });
       refreshWallet();
     } else if (bets.length > 0) {
-      toast.error(`Better luck next time! Winning color was ${winningColor.name}`, {
+      toast.error(`Better luck next time! Winning number was ${winningNumber}`, {
         duration: 4000,
       });
     }
@@ -158,18 +136,18 @@ export default function Trading() {
     }, 5000);
   };
 
-  // Toggle color selection
-  const toggleColor = (colorId: string) => {
+  // Toggle number selection
+  const toggleNumber = (number: number) => {
     if (currentRound?.status !== 'betting') {
       toast.error('Betting is closed!');
       return;
     }
 
-    setSelectedColors(prev => {
-      if (prev.includes(colorId)) {
-        return prev.filter(id => id !== colorId);
+    setSelectedNumbers(prev => {
+      if (prev.includes(number)) {
+        return prev.filter(n => n !== number);
       } else {
-        return [...prev, colorId];
+        return [...prev, number];
       }
     });
   };
@@ -181,12 +159,12 @@ export default function Trading() {
       return;
     }
 
-    if (selectedColors.length === 0) {
-      toast.error('Please select at least one color');
+    if (selectedNumbers.length === 0) {
+      toast.error('Please select at least one number');
       return;
     }
 
-    const totalBetAmount = selectedColors.length * selectedPlan.amount;
+    const totalBetAmount = selectedNumbers.length * selectedPlan.amount;
     
     if ((wallet?.balance || 0) < totalBetAmount) {
       toast.error('Insufficient balance!');
@@ -194,22 +172,20 @@ export default function Trading() {
     }
 
     // Create bets
-    const newBets: Bet[] = selectedColors.map(colorId => ({
-      id: `bet-${Date.now()}-${colorId}`,
-      colorId,
+    const newBets: Bet[] = selectedNumbers.map(number => ({
+      id: `bet-${Date.now()}-${number}`,
+      number,
       amount: selectedPlan.amount,
       timestamp: Date.now(),
     }));
 
     setBets(prev => [...prev, ...newBets]);
-    setSelectedColors([]);
+    setSelectedNumbers([]);
     
-    // Deduct balance (in real app, this would be API call)
-    toast.success(`Bet placed: ${formatCurrency(totalBetAmount)} on ${selectedColors.length} color(s)`, {
+    toast.success(`Bet placed: ${formatCurrency(totalBetAmount)} on ${selectedNumbers.length} number(s)`, {
       duration: 3000,
     });
     
-    // Refresh wallet to show updated balance
     setTimeout(() => refreshWallet(), 500);
   };
 
@@ -234,10 +210,17 @@ export default function Trading() {
     }
   };
 
-  // Calculate total bet amount for selected colors
+  // Calculate total bet amount for selected numbers
   const getTotalBetAmount = () => {
-    return selectedColors.length * selectedPlan.amount;
+    return selectedNumbers.length * selectedPlan.amount;
   };
+
+  // Group numbers by tens for better display
+  const groupedNumbers = Array.from({ length: 11 }, (_, i) => {
+    const start = i * 10;
+    const end = i === 10 ? 101 : start + 10;
+    return numbers.slice(start, end);
+  });
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -245,26 +228,26 @@ export default function Trading() {
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-3xl font-bold text-foreground">Trading Games</h1>
           <Link 
-            to="/trading/number"
-            className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition-colors"
+            to="/trading"
+            className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-semibold transition-colors"
           >
-            Switch to Number Trading →
+            ← Switch to Color Trading
           </Link>
         </div>
-        <h2 className="text-2xl font-semibold text-foreground mb-2">Color Trading Game</h2>
+        <h2 className="text-2xl font-semibold text-foreground mb-2">Number Trading Game</h2>
         <p className="text-muted-foreground">
-          Select colors and place your bets. Win 2x your bet amount!
+          Select numbers from 0-100 and place your bets. Win 2x your bet amount!
         </p>
       </div>
 
       {/* Wallet Balance */}
-      <Card className="mb-6 bg-gradient-to-r from-green-500 to-green-600 text-white p-6">
+      <Card className="mb-6 bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6">
         <div className="text-sm opacity-90 mb-1">Your Balance</div>
         <div className="text-3xl font-bold">{formatCurrency(wallet?.balance || 0)}</div>
       </Card>
 
       {/* Game Status */}
-      <Card className="mb-6 p-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white">
+      <Card className="mb-6 p-4 bg-gradient-to-r from-purple-500 to-pink-600 text-white">
         <div className="flex items-center justify-between">
           <div>
             <div className="text-sm opacity-90">Round Status</div>
@@ -282,46 +265,53 @@ export default function Trading() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Game Area */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Color Grid */}
+          {/* Number Grid */}
           <Card className="p-6">
-            <h2 className="text-xl font-semibold mb-4">Select Colors</h2>
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-              {colors.map(color => {
-                const isSelected = selectedColors.includes(color.id);
-                const isWinning = currentRound?.winningColor === color.id && currentRound.status === 'finished';
-                
-                return (
-                  <button
-                    key={color.id}
-                    onClick={() => toggleColor(color.id)}
-                    disabled={currentRound?.status !== 'betting'}
-                    className={`
-                      relative aspect-square rounded-lg font-semibold text-sm
-                      transition-all duration-200 transform
-                      ${currentRound?.status === 'betting' ? 'hover:scale-105 cursor-pointer' : 'cursor-not-allowed opacity-60'}
-                      ${isSelected ? 'ring-4 ring-yellow-400 scale-105' : ''}
-                      ${isWinning ? 'ring-4 ring-green-400 animate-pulse' : ''}
-                      disabled:cursor-not-allowed
-                    `}
-                    style={{ 
-                      backgroundColor: color.color,
-                      color: color.textColor,
-                    }}
-                  >
-                    {color.name}
-                    {isSelected && (
-                      <div className="absolute -top-2 -right-2 bg-yellow-400 text-black rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
-                        ✓
-                      </div>
-                    )}
-                    {isWinning && (
-                      <div className="absolute -top-2 -right-2 bg-green-400 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs">
-                        🏆
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
+            <h2 className="text-xl font-semibold mb-4">Select Numbers (0-100)</h2>
+            <div className="space-y-3">
+              {groupedNumbers.map((group, groupIndex) => (
+                <div key={groupIndex} className="space-y-2">
+                  <div className="text-xs text-muted-foreground font-semibold">
+                    {groupIndex * 10} - {groupIndex === 10 ? 100 : (groupIndex * 10 + 9)}
+                  </div>
+                  <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
+                    {group.map(number => {
+                      const isSelected = selectedNumbers.includes(number);
+                      const isWinning = currentRound?.winningNumber === number && currentRound.status === 'finished';
+                      const hasBet = bets.some(bet => bet.number === number);
+                      
+                      return (
+                        <button
+                          key={number}
+                          onClick={() => toggleNumber(number)}
+                          disabled={currentRound?.status !== 'betting'}
+                          className={`
+                            relative aspect-square rounded-lg font-bold text-sm
+                            transition-all duration-200 transform
+                            ${currentRound?.status === 'betting' ? 'hover:scale-110 cursor-pointer' : 'cursor-not-allowed opacity-60'}
+                            ${isSelected ? 'bg-yellow-500 text-black ring-2 ring-yellow-400 scale-110' : 'bg-gradient-to-br from-gray-700 to-gray-800 text-white'}
+                            ${isWinning ? 'bg-green-500 ring-4 ring-green-400 animate-pulse' : ''}
+                            ${hasBet && !isSelected ? 'ring-2 ring-blue-400' : ''}
+                            disabled:cursor-not-allowed flex items-center justify-center
+                          `}
+                        >
+                          {number}
+                          {isSelected && (
+                            <div className="absolute -top-1 -right-1 bg-yellow-400 text-black rounded-full w-4 h-4 flex items-center justify-center text-xs">
+                              ✓
+                            </div>
+                          )}
+                          {isWinning && (
+                            <div className="absolute -top-1 -right-1 bg-green-400 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
+                              🏆
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
           </Card>
 
@@ -337,7 +327,7 @@ export default function Trading() {
                     p-4 rounded-lg font-semibold text-lg
                     transition-all duration-200 transform hover:scale-105
                     ${selectedPlan.id === plan.id 
-                      ? 'bg-gradient-to-r from-green-500 to-green-600 text-white ring-2 ring-green-400' 
+                      ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white ring-2 ring-blue-400' 
                       : 'bg-muted hover:bg-muted/80'
                     }
                   `}
@@ -349,17 +339,24 @@ export default function Trading() {
           </Card>
 
           {/* Place Bet Button */}
-          {selectedColors.length > 0 && (
-            <Card className="p-6 bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
+          {selectedNumbers.length > 0 && (
+            <Card className="p-6 bg-gradient-to-r from-orange-500 to-red-500 text-white">
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <div className="text-sm opacity-90">Total Bet Amount</div>
                   <div className="text-2xl font-bold">{formatCurrency(getTotalBetAmount())}</div>
                 </div>
                 <div className="text-right">
-                  <div className="text-sm opacity-90">Selected Colors</div>
-                  <div className="text-2xl font-bold">{selectedColors.length}</div>
+                  <div className="text-sm opacity-90">Selected Numbers</div>
+                  <div className="text-2xl font-bold">{selectedNumbers.length}</div>
                 </div>
+              </div>
+              <div className="mb-4 flex flex-wrap gap-2">
+                {selectedNumbers.sort((a, b) => a - b).map(num => (
+                  <span key={num} className="bg-white/20 px-3 py-1 rounded-full text-sm font-semibold">
+                    {num}
+                  </span>
+                ))}
               </div>
               <Button 
                 onClick={placeBet}
@@ -377,8 +374,7 @@ export default function Trading() {
               <h2 className="text-xl font-semibold mb-4">Your Bets This Round</h2>
               <div className="space-y-2">
                 {bets.map(bet => {
-                  const color = colors.find(c => c.id === bet.colorId);
-                  const isWinning = currentRound?.winningColor === bet.colorId && currentRound.status === 'finished';
+                  const isWinning = currentRound?.winningNumber === bet.number && currentRound.status === 'finished';
                   
                   return (
                     <div 
@@ -389,11 +385,9 @@ export default function Trading() {
                       `}
                     >
                       <div className="flex items-center gap-3">
-                        <div 
-                          className="w-8 h-8 rounded"
-                          style={{ backgroundColor: color?.color }}
-                        />
-                        <span className="font-semibold">{color?.name}</span>
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-gray-700 to-gray-900 text-white flex items-center justify-center font-bold">
+                          {bet.number}
+                        </div>
                         {isWinning && <span className="text-green-600 font-bold">🏆 Winner!</span>}
                       </div>
                       <div className="text-right">
@@ -417,7 +411,7 @@ export default function Trading() {
                   <div className="flex justify-between text-sm mt-1">
                     <span className="text-muted-foreground">Total Winnings:</span>
                     <span className="font-bold text-green-600">
-                      {formatCurrency(bets.filter(b => b.colorId === currentRound.winningColor).reduce((sum, b) => sum + (b.amount * 2), 0))}
+                      {formatCurrency(bets.filter(b => b.number === currentRound.winningNumber).reduce((sum, b) => sum + (b.amount * 2), 0))}
                     </span>
                   </div>
                 )}
@@ -436,34 +430,29 @@ export default function Trading() {
               </p>
             ) : (
               <div className="space-y-3">
-                {gameHistory.map((round, index) => {
-                  const winningColor = colors.find(c => c.id === round.winningColor);
-                  
-                  return (
-                    <div 
-                      key={round.id}
-                      className="p-3 rounded-lg bg-muted border border-border"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs text-muted-foreground">
-                          Round #{gameHistory.length - index}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(round.startTime).toLocaleTimeString()}
-                        </span>
-                      </div>
-                      {winningColor && (
-                        <div className="flex items-center gap-2">
-                          <div 
-                            className="w-6 h-6 rounded"
-                            style={{ backgroundColor: winningColor.color }}
-                          />
-                          <span className="font-semibold text-sm">{winningColor.name}</span>
-                        </div>
-                      )}
+                {gameHistory.map((round, index) => (
+                  <div 
+                    key={round.id}
+                    className="p-3 rounded-lg bg-muted border border-border"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs text-muted-foreground">
+                        Round #{gameHistory.length - index}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(round.startTime).toLocaleTimeString()}
+                      </span>
                     </div>
-                  );
-                })}
+                    {round.winningNumber !== undefined && (
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-500 to-green-700 text-white flex items-center justify-center font-bold text-sm">
+                          {round.winningNumber}
+                        </div>
+                        <span className="font-semibold text-sm">Winner</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
           </Card>
@@ -473,23 +462,23 @@ export default function Trading() {
             <h2 className="text-xl font-semibold mb-4">How to Play</h2>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li className="flex items-start gap-2">
-                <span className="text-green-500 font-bold">1.</span>
-                <span>Select one or more colors you think will win</span>
+                <span className="text-blue-500 font-bold">1.</span>
+                <span>Select one or more numbers from 0 to 100</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-green-500 font-bold">2.</span>
+                <span className="text-blue-500 font-bold">2.</span>
                 <span>Choose your bet amount (₹10, ₹20, ₹50, or ₹100)</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-green-500 font-bold">3.</span>
+                <span className="text-blue-500 font-bold">3.</span>
                 <span>Place your bet before the 2.5 minute mark</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-green-500 font-bold">4.</span>
+                <span className="text-blue-500 font-bold">4.</span>
                 <span>Wait for the result - win 2x your bet!</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-green-500 font-bold">⏱️</span>
+                <span className="text-blue-500 font-bold">⏱️</span>
                 <span>Each round lasts 3 minutes</span>
               </li>
             </ul>

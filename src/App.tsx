@@ -15,13 +15,22 @@ import Dashboard from './pages/Dashboard'
 import News from './pages/News'
 import NewsDetail from './pages/NewsDetail'
 import Trading from './pages/Trading'
+import NumberTrading from './pages/NumberTrading'
 import Wallet from './pages/Wallet'
 import AddMoney from './pages/AddMoney'
 import Profile from './pages/Profile'
+import EditProfile from './pages/EditProfile'
 import Network from './pages/Network'
 import Plans from './pages/Plans'
 import Settings from './pages/Settings'
 import Withdrawals from './pages/Withdrawals'
+import MyTrades from './pages/MyTrades'
+import Earnings from './pages/Earnings'
+import Redeem from './pages/Redeem'
+import Rewards from './pages/Rewards'
+import Bookmarks from './pages/Bookmarks'
+import Categories from './pages/Categories'
+import Trending from './pages/Trending'
 
 function App() {
   return (
@@ -46,10 +55,19 @@ function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/news" element={<News />} />
             <Route path="/news/:id" element={<NewsDetail />} />
+            <Route path="/news/bookmarks" element={<Bookmarks />} />
+            <Route path="/news/categories" element={<Categories />} />
+            <Route path="/news/trending" element={<Trending />} />
             <Route path="/trading" element={<Trading />} />
+            <Route path="/trading/number" element={<NumberTrading />} />
+            <Route path="/trading/history" element={<MyTrades />} />
             <Route path="/wallet" element={<Wallet />} />
             <Route path="/add-money" element={<AddMoney />} />
+            <Route path="/earnings" element={<Earnings />} />
+            <Route path="/redeem" element={<Redeem />} />
+            <Route path="/rewards" element={<Rewards />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/edit-profile" element={<EditProfile />} />
             <Route path="/network" element={<Network />} />
             <Route path="/plans" element={<Plans />} />
             <Route path="/settings" element={<Settings />} />

@@ -1,321 +1,332 @@
-import { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useWallet } from '@/contexts/WalletContext';
-import Card from '@/components/common/Card';
-import Button from '@/components/common/Button';
-import Input from '@/components/common/Input';
-import { formatCurrency } from '@/utils/helpers';
-import toast from 'react-hot-toast';
+import { toast } from 'react-hot-toast';
 import { 
   Wallet, 
   CreditCard, 
   Smartphone, 
+  Building2, 
+  Banknote,
   ArrowLeft,
-  CheckCircle,
-  Info,
-  Shield
+  HelpCircle,
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
+import paymentApi from '../services/paymentApi';
 
-// Quick amount presets
-const QUICK_AMOUNTS = [100, 500, 1000, 2000, 5000, 10000];
+// Predefined amounts for quick selection
+const quickAmounts = [100, 500, 1000, 2000, 5000, 10000];
 
 // Payment methods
-const PAYMENT_METHODS = [
-  { id: 'upi', name: 'UPI', icon: Smartphone, description: 'Pay with any UPI app' },
-  { id: 'card', name: 'Card', icon: CreditCard, description: 'Credit/Debit Card' },
-  { id: 'netbanking', name: 'Net Banking', icon: Wallet, description: 'Internet Banking' },
+const paymentMethods = [
+  {
+    id: 'upi',
+    name: 'UPI',
+    icon: Smartphone,
+    description: 'Pay using UPI ID or QR code',
+    isAvailable: true,
+  },
+  {
+    id: 'card',
+    name: 'Credit/Debit Card',
+    icon: CreditCard,
+    description: 'Visa, Mastercard, RuPay',
+    isAvailable: true,
+  },
+  {
+    id: 'netbanking',
+    name: 'Net Banking',
+    icon: Building2,
+    description: 'Pay using your bank account',
+    isAvailable: true,
+  },
+  {
+    id: 'wallet',
+    name: 'Digital Wallet',
+    icon: Wallet,
+    description: 'Paytm, PhonePe, GooglePay',
+    isAvailable: true,
+  },
 ];
 
-export default function AddMoney() {
+const AddMoney: React.FC = () => {
   const navigate = useNavigate();
-  const { wallet, refreshWallet, addMoney } = useWallet();
-  
   const [amount, setAmount] = useState('');
-  const [selectedMethod, setSelectedMethod] = useState('upi');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('upi');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [errors, setErrors] = useState<{ amount?: string }>({});
-
-  useEffect(() => {
-    document.title = 'Add Money - WeNews';
-    refreshWallet();
-  }, []);
 
   const handleQuickAmount = (value: number) => {
     setAmount(value.toString());
-    setErrors({});
   };
 
-  const validateAmount = (): boolean => {
-    const newErrors: { amount?: string } = {};
-    const numAmount = parseFloat(amount);
+  const handlePaymentMethodSelect = (methodId: string) => {
+    setSelectedPaymentMethod(methodId);
+  };
 
-    if (!amount || amount.trim() === '') {
-      newErrors.amount = 'Please enter an amount';
-    } else if (isNaN(numAmount)) {
-      newErrors.amount = 'Please enter a valid number';
-    } else if (numAmount < 10) {
-      newErrors.amount = 'Minimum amount is ₹10';
-    } else if (numAmount > 100000) {
-      newErrors.amount = 'Maximum amount is ₹1,00,000';
+  const formatAmount = (value: string) => {
+    // Remove non-numeric characters except decimal point
+    const numericValue = value.replace(/[^0-9.]/g, '');
+    
+    // Ensure only one decimal point
+    const parts = numericValue.split('.');
+    if (parts.length > 2) {
+      return parts[0] + '.' + parts[1];
+    }
+    
+    return numericValue;
+  };
+
+  const handleAddMoney = async () => {
+    if (!amount || parseFloat(amount) <= 0) {
+      toast.error('Please enter a valid amount');
+      return;
     }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+    if (parseFloat(amount) < 200) {
+      toast.error('Minimum amount to add is ₹200');
+      return;
+    }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    if (parseFloat(amount) > 100000) {
+      toast.error('Maximum amount to add is ₹1,00,000');
+      return;
+    }
 
-    if (!validateAmount()) return;
-
-    const numAmount = parseFloat(amount);
+    setIsProcessing(true);
 
     try {
-      setIsProcessing(true);
+      // Call wallet topup API
+      const topupRequest = {
+        amount: parseFloat(amount),
+        paymentMethod: 'cashfree',
+      };
 
-      // Call the add money API
-      await addMoney(numAmount);
+      console.log('Initiating wallet topup:', topupRequest);
 
-      // In a real implementation, you would:
-      // 1. Get payment URL/session from backend
-      // 2. Redirect to payment gateway (Cashfree, Razorpay, etc.)
-      // 3. Handle payment callback
+      const response = await paymentApi.initiateTopup(topupRequest);
+
+      console.log('Topup API response:', response);
+
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to initiate payment');
+      }
+
+      // Extract payment details from response
+      const { transactionId, amounts, paymentResponse } = response.data;
       
-      // For now, simulate success
-      toast.success(`Payment initiated for ${formatCurrency(numAmount)}`);
-      
-      // Simulate payment processing
-      setTimeout(() => {
-        toast.success('Payment successful! Your wallet has been updated.');
-        refreshWallet();
-        navigate('/wallet');
-      }, 2000);
+      const { payment_session_id } = paymentResponse.paymentData;
 
-      // In production, you would redirect to payment gateway:
-      // window.location.href = paymentData.paymentUrl;
+      // Validate payment session ID
+      if (!payment_session_id) {
+        console.error('Payment session ID is missing!');
+        throw new Error('Payment session ID not received from server');
+      }
 
+      console.log('Opening Cashfree payment gateway...');
+      console.log('Transaction ID:', transactionId);
+      console.log('Final Amount:', amounts.finalAmount);
+      console.log('Payment Session ID:', payment_session_id);
+
+      // Open Cashfree payment gateway
+      await paymentApi.processCashfreePayment(
+        transactionId,
+        payment_session_id,
+        {
+          onSuccess: async (data) => {
+            console.log('Payment successful:', data);
+            setIsProcessing(false);
+            
+            toast.success(`₹${amounts.creditAmount} has been added to your wallet!`);
+
+            // Reset form
+            setAmount('');
+            setSelectedPaymentMethod('upi');
+
+            // Navigate back after short delay
+            setTimeout(() => {
+              navigate('/wallet');
+            }, 1500);
+          },
+          onFailure: (error) => {
+            console.error('Payment failed:', error);
+            setIsProcessing(false);
+            
+            toast.error(error.error?.message || 'Payment was not completed. Please try again.');
+          },
+          onError: (error) => {
+            console.error('Payment error:', error);
+            setIsProcessing(false);
+            
+            toast.error('An error occurred during payment. Please try again.');
+          },
+        }
+      );
     } catch (error: any) {
-      console.error('Payment initiation failed:', error);
-      toast.error(error.message || 'Failed to initiate payment');
-    } finally {
+      console.error('Wallet topup error:', error);
       setIsProcessing(false);
+      
+      toast.error(error.response?.data?.message || error.message || 'Failed to initiate payment. Please try again.');
     }
   };
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      {/* Back Button */}
-      <button
-        onClick={() => navigate('/wallet')}
-        className="flex items-center text-text-secondary hover:text-text-primary mb-6 transition-colors"
-      >
-        <ArrowLeft className="w-5 h-5 mr-2" />
-        Back to Wallet
-      </button>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Form */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Header */}
-          <div>
-            <h1 className="text-3xl font-display font-bold text-text-primary">Add Money</h1>
-            <p className="text-text-secondary mt-1">Top up your wallet to continue earning</p>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between py-4">
+            <button
+              onClick={() => navigate(-1)}
+              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+            >
+              <ArrowLeft className="w-6 h-6" />
+            </button>
+            <h1 className="text-xl font-bold">Add Money</h1>
+            <button className="p-2 hover:bg-white/10 rounded-lg transition-colors">
+              <HelpCircle className="w-6 h-6" />
+            </button>
           </div>
+        </div>
+      </div>
 
-          {/* Current Balance Card */}
-          <Card className="bg-gradient-to-br from-primary to-primary-dark text-white">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-white/80 text-sm">Current Balance</p>
-                <p className="text-3xl font-bold mt-1">{formatCurrency(wallet?.balance || 0)}</p>
-              </div>
-              <Wallet className="w-16 h-16 opacity-30" />
-            </div>
-          </Card>
-
-          {/* Amount Selection */}
-          <Card>
-            <h2 className="text-xl font-semibold mb-4">Enter Amount</h2>
-            
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Custom Amount Input */}
-              <div>
-                <Input
-                  label="Amount (₹)"
-                  type="number"
-                  placeholder="Enter amount"
-                  value={amount}
-                  onChange={(e) => {
-                    setAmount(e.target.value);
-                    setErrors({});
-                  }}
-                  error={errors.amount}
-                  fullWidth
-                  min={10}
-                  max={100000}
-                />
-              </div>
-
-              {/* Quick Amount Buttons */}
-              <div>
-                <label className="block text-sm font-medium text-text-primary mb-3">
-                  Quick Select
-                </label>
-                <div className="grid grid-cols-3 gap-3">
-                  {QUICK_AMOUNTS.map((quickAmount) => (
-                    <button
-                      key={quickAmount}
-                      type="button"
-                      onClick={() => handleQuickAmount(quickAmount)}
-                      className={`p-3 rounded-lg border-2 transition-all font-medium ${
-                        amount === quickAmount.toString()
-                          ? 'border-primary bg-primary text-white'
-                          : 'border-gray-200 hover:border-primary hover:bg-primary/5'
-                      }`}
-                    >
-                      ₹{quickAmount.toLocaleString('en-IN')}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Payment Method Selection */}
-              <div>
-                <label className="block text-sm font-medium text-text-primary mb-3">
-                  Payment Method
-                </label>
-                <div className="space-y-3">
-                  {PAYMENT_METHODS.map((method) => {
-                    const Icon = method.icon;
-                    return (
-                      <button
-                        key={method.id}
-                        type="button"
-                        onClick={() => setSelectedMethod(method.id)}
-                        className={`w-full p-4 rounded-lg border-2 transition-all flex items-center gap-4 ${
-                          selectedMethod === method.id
-                            ? 'border-primary bg-primary/5'
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                      >
-                        <div
-                          className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                            selectedMethod === method.id
-                              ? 'bg-primary text-white'
-                              : 'bg-gray-100 text-gray-600'
-                          }`}
-                        >
-                          <Icon className="w-6 h-6" />
-                        </div>
-                        <div className="flex-1 text-left">
-                          <div className="font-semibold text-text-primary">{method.name}</div>
-                          <div className="text-sm text-text-secondary">{method.description}</div>
-                        </div>
-                        {selectedMethod === method.id && (
-                          <CheckCircle className="w-6 h-6 text-primary" />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Submit Button */}
-              <Button
-                type="submit"
-                variant="primary"
-                fullWidth
-                size="lg"
-                loading={isProcessing}
-                disabled={!amount || isProcessing}
-              >
-                {isProcessing ? 'Processing...' : `Add ${amount ? formatCurrency(parseFloat(amount) || 0) : '₹0'}`}
-              </Button>
-            </form>
-          </Card>
-
-          {/* Security Notice */}
-          <Card className="bg-blue-50 border border-blue-200">
-            <div className="flex items-start gap-3">
-              <Shield className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-              <div className="flex-1">
-                <h3 className="font-semibold text-blue-900 mb-1">Secure Payment</h3>
-                <p className="text-sm text-blue-700">
-                  All transactions are encrypted and secure. We use industry-standard payment gateways
-                  to ensure your money is safe.
-                </p>
-              </div>
-            </div>
-          </Card>
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Amount Input Section */}
+        <div className="bg-white rounded-2xl shadow-xl p-6 mb-6 border border-gray-100">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Enter Amount</h2>
+          
+          <div className="relative">
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-3xl font-bold text-gray-400">
+              ₹
+            </span>
+            <input
+              type="text"
+              value={amount}
+              onChange={(e) => setAmount(formatAmount(e.target.value))}
+              placeholder="0"
+              maxLength={8}
+              className="w-full pl-12 pr-4 py-4 text-3xl font-bold text-gray-900 bg-gray-50 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all outline-none"
+            />
+          </div>
+          
+          <p className="text-sm text-gray-500 mt-3 text-center">
+            Minimum: ₹200 | Maximum: ₹1,00,000
+          </p>
         </div>
 
-        {/* Sidebar - Benefits & Info */}
-        <div className="space-y-6">
-          {/* Benefits Card */}
-          <Card>
-            <h3 className="font-semibold text-text-primary mb-4 flex items-center gap-2">
-              <Info className="w-5 h-5 text-primary" />
-              Benefits
-            </h3>
-            <ul className="space-y-3 text-sm text-text-secondary">
-              <li className="flex items-start gap-2">
-                <CheckCircle className="w-4 h-4 text-success mt-0.5 flex-shrink-0" />
-                <span>Instant wallet top-up</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle className="w-4 h-4 text-success mt-0.5 flex-shrink-0" />
-                <span>Multiple payment methods</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle className="w-4 h-4 text-success mt-0.5 flex-shrink-0" />
-                <span>Secure encrypted transactions</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle className="w-4 h-4 text-success mt-0.5 flex-shrink-0" />
-                <span>No hidden charges</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle className="w-4 h-4 text-success mt-0.5 flex-shrink-0" />
-                <span>24/7 transaction support</span>
-              </li>
+        {/* Quick Amount Selection */}
+        <div className="bg-white rounded-2xl shadow-xl p-6 mb-6 border border-gray-100">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Add</h2>
+          
+          <div className="grid grid-cols-3 gap-3">
+            {quickAmounts.map((value) => (
+              <button
+                key={value}
+                onClick={() => handleQuickAmount(value)}
+                className={`
+                  py-3 px-4 rounded-xl font-semibold text-sm transition-all
+                  ${amount === value.toString()
+                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg scale-105'
+                    : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border-2 border-gray-200'
+                  }
+                `}
+              >
+                ₹{value.toLocaleString()}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Payment Methods */}
+        <div className="bg-white rounded-2xl shadow-xl p-6 mb-6 border border-gray-100">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Select Payment Method</h2>
+          
+          <div className="space-y-3">
+            {paymentMethods.map((method) => {
+              const Icon = method.icon;
+              const isSelected = selectedPaymentMethod === method.id;
+              
+              return (
+                <button
+                  key={method.id}
+                  onClick={() => method.isAvailable && handlePaymentMethodSelect(method.id)}
+                  disabled={!method.isAvailable}
+                  className={`
+                    w-full p-4 rounded-xl border-2 transition-all text-left
+                    ${isSelected
+                      ? 'border-blue-600 bg-blue-50 shadow-md'
+                      : 'border-gray-200 bg-white hover:bg-gray-50'
+                    }
+                    ${!method.isAvailable ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+                  `}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={`
+                      p-3 rounded-lg
+                      ${isSelected ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'}
+                    `}>
+                      <Icon className="w-6 h-6" />
+                    </div>
+                    
+                    <div className="flex-1">
+                      <h3 className={`font-semibold ${isSelected ? 'text-blue-900' : 'text-gray-900'}`}>
+                        {method.name}
+                      </h3>
+                      <p className={`text-sm ${isSelected ? 'text-blue-700' : 'text-gray-500'}`}>
+                        {method.description}
+                      </p>
+                    </div>
+                    
+                    {isSelected && (
+                      <CheckCircle2 className="w-6 h-6 text-blue-600" />
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Important Notice */}
+        <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-4 mb-6 flex gap-3">
+          <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-amber-800">
+            <p className="font-semibold mb-1">Important Information</p>
+            <ul className="space-y-1 list-disc list-inside">
+              <li>Minimum topup amount is ₹200</li>
+              <li>GST will be added to the amount</li>
+              <li>Money will be credited instantly after successful payment</li>
+              <li>For any issues, contact support</li>
             </ul>
-          </Card>
+          </div>
+        </div>
 
-          {/* Transaction Info */}
-          <Card className="bg-gray-50">
-            <h3 className="font-semibold text-text-primary mb-3">Transaction Info</h3>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-text-secondary">Min. Amount:</span>
-                <span className="font-medium">₹10</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-text-secondary">Max. Amount:</span>
-                <span className="font-medium">₹1,00,000</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-text-secondary">Processing Time:</span>
-                <span className="font-medium">Instant</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-text-secondary">Transaction Fee:</span>
-                <span className="font-medium text-success">Free</span>
-              </div>
+        {/* Add Money Button */}
+        <button
+          onClick={handleAddMoney}
+          disabled={isProcessing || !amount || parseFloat(amount) < 200}
+          className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold text-lg rounded-xl shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+        >
+          {isProcessing ? (
+            <div className="flex items-center justify-center gap-2">
+              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              Processing...
             </div>
-          </Card>
+          ) : (
+            <div className="flex items-center justify-center gap-2">
+              <Banknote className="w-6 h-6" />
+              Add ₹{amount || '0'} to Wallet
+            </div>
+          )}
+        </button>
 
-          {/* Help Card */}
-          <Card className="bg-primary/5 border border-primary/20">
-            <h3 className="font-semibold text-primary mb-2">Need Help?</h3>
-            <p className="text-sm text-text-secondary mb-3">
-              If you face any issues with payment, please contact our support team.
-            </p>
-            <Button variant="outline" size="sm" fullWidth>
-              Contact Support
-            </Button>
-          </Card>
+        {/* Security Badge */}
+        <div className="mt-6 flex items-center justify-center gap-2 text-sm text-gray-500">
+          <CheckCircle2 className="w-4 h-4 text-green-600" />
+          <span>Secured by Cashfree Payment Gateway</span>
         </div>
       </div>
     </div>
   );
-}
+};
+
+export default AddMoney;

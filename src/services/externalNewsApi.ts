@@ -27,26 +27,6 @@ export interface Article {
 }
 
 // Helper Functions
-const formatTimeAgo = (publishedAt: string): string => {
-  const now = new Date();
-  const published = new Date(publishedAt);
-  const diffInHours = Math.floor(
-    (now.getTime() - published.getTime()) / (1000 * 60 * 60)
-  );
-
-  if (diffInHours < 1) return 'Just now';
-  if (diffInHours < 24) return `${diffInHours}h ago`;
-
-  const diffInDays = Math.floor(diffInHours / 24);
-  if (diffInDays < 7) return `${diffInDays}d ago`;
-
-  return published.toLocaleDateString('en-IN', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-};
-
 const mapCategory = (_apiCategory: string, sourceName: string): string => {
   const sourceLower = sourceName.toLowerCase();
 

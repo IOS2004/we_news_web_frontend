@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { authService } from '@/services/authService';
 import { STORAGE_KEYS } from '@/config';
 import type { User, LoginCredentials, SignUpData } from '@/types';
