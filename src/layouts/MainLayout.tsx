@@ -13,7 +13,12 @@ import {
   Menu,
   X,
   User,
-  ArrowDownToLine
+  ArrowDownToLine,
+  PlusCircle,
+  DollarSign,
+  ShoppingBag,
+  Gift,
+  BarChart3
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -27,7 +32,12 @@ export default function MainLayout() {
     { name: 'Dashboard', to: '/dashboard', icon: Home },
     { name: 'News', to: '/news', icon: Newspaper },
     { name: 'Trading', to: '/trading', icon: TrendingUp },
+    { name: 'My Trades', to: '/trading/history', icon: BarChart3 },
     { name: 'Wallet', to: '/wallet', icon: Wallet },
+    { name: 'Add Money', to: '/add-money', icon: PlusCircle },
+    { name: 'Earnings', to: '/earnings', icon: DollarSign },
+    { name: 'Redeem', to: '/redeem', icon: ShoppingBag },
+    { name: 'Rewards', to: '/rewards', icon: Gift },
     { name: 'Network', to: '/network', icon: Users },
     { name: 'Withdrawals', to: '/withdrawals', icon: ArrowDownToLine },
     { name: 'Profile', to: '/profile', icon: User },

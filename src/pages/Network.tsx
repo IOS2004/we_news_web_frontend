@@ -107,7 +107,7 @@ const mockNetworkData: NetworkData = {
 
 export default function Network() {
   const { user } = useAuth();
-  const [networkData, setNetworkData] = useState<NetworkData>(mockNetworkData);
+  const [networkData] = useState<NetworkData>(mockNetworkData);
   const [selectedLevel, setSelectedLevel] = useState<number>(1);
   const [viewMode, setViewMode] = useState<'overview' | 'tree' | 'members'>('overview');
   const [referralLink, setReferralLink] = useState('');
