@@ -16,6 +16,7 @@ import News from './pages/News'
 import NewsDetail from './pages/NewsDetail'
 import Trading from './pages/Trading'
 import Wallet from './pages/Wallet'
+import AddMoney from './pages/AddMoney'
 import Profile from './pages/Profile'
 import Network from './pages/Network'
 import Plans from './pages/Plans'
@@ -47,6 +48,7 @@ function App() {
             <Route path="/news/:id" element={<NewsDetail />} />
             <Route path="/trading" element={<Trading />} />
             <Route path="/wallet" element={<Wallet />} />
+            <Route path="/add-money" element={<AddMoney />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/network" element={<Network />} />
             <Route path="/plans" element={<Plans />} />
