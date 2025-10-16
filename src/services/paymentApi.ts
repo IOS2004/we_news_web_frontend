@@ -194,11 +194,16 @@ export const loadCashfreeSDK = (): Promise<any> => {
  * Initialize Cashfree payment
  */
 export const initializeCashfreePayment = async (
-  _paymentSessionId: string,
-  environment: "sandbox" | "production" = "production"
+  _paymentSessionId: string
 ): Promise<any> => {
   try {
     const Cashfree = await loadCashfreeSDK();
+    
+    // Get environment from config
+    const { default: config } = await import('../config');
+    const environment = config.cashfree.mode === 'production' ? 'production' : 'sandbox';
+    
+    console.log('Initializing Cashfree with mode:', environment);
 
     const cashfree = Cashfree({
       mode: environment,
@@ -224,16 +229,25 @@ export const processCashfreePayment = async (
   }
 ): Promise<void> => {
   try {
+    console.log('=== CASHFREE PAYMENT PROCESSING ===');
+    console.log('Transaction ID:', transactionId);
+    console.log('Payment Session ID:', paymentSessionId);
+    
     const cashfree = await initializeCashfreePayment(paymentSessionId);
+    console.log('Cashfree SDK initialized successfully');
 
     const checkoutOptions = {
       paymentSessionId: paymentSessionId,
       returnUrl: `${window.location.origin}/wallet?payment=success&txnId=${transactionId}`,
     };
+    
+    console.log('Opening Cashfree checkout with options:', checkoutOptions);
 
     cashfree
       .checkout(checkoutOptions)
       .then((result: any) => {
+        console.log('Cashfree checkout result:', result);
+        
         if (result.error) {
           console.error("Payment error:", result.error);
           callbacks.onError?.(result.error);

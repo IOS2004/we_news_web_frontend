@@ -12,10 +12,12 @@ import {
   CheckCircle2,
   AlertCircle
 } from 'lucide-react';
-import paymentApi from '../services/paymentApi';
 
 // Predefined amounts for quick selection
 const quickAmounts = [100, 500, 1000, 2000, 5000, 10000];
+
+// Minimum deposit amount
+const MIN_DEPOSIT_AMOUNT = 0;
 
 // Payment methods
 const paymentMethods = [
@@ -54,7 +56,6 @@ const AddMoney: React.FC = () => {
   const location = useLocation();
   const [amount, setAmount] = useState('');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('upi');
-  const [isProcessing, setIsProcessing] = useState(false);
   const [isGuest, setIsGuest] = useState(false);
   const [guestEmail, setGuestEmail] = useState('');
 
@@ -102,8 +103,8 @@ const AddMoney: React.FC = () => {
       return;
     }
 
-    if (parseFloat(amount) < 200) {
-      toast.error('Minimum amount to add is ₹200');
+    if (parseFloat(amount) < MIN_DEPOSIT_AMOUNT) {
+      toast.error(`Minimum amount to add is ₹${MIN_DEPOSIT_AMOUNT}`);
       return;
     }
 
@@ -112,81 +113,12 @@ const AddMoney: React.FC = () => {
       return;
     }
 
-    setIsProcessing(true);
-
-    try {
-      // Call wallet topup API
-      const topupRequest = {
-        amount: parseFloat(amount),
-        paymentMethod: 'cashfree',
-      };
-
-      console.log('Initiating wallet topup:', topupRequest);
-
-      const response = await paymentApi.initiateTopup(topupRequest);
-
-      console.log('Topup API response:', response);
-
-      if (!response.success) {
-        throw new Error(response.message || 'Failed to initiate payment');
-      }
-
-      // Extract payment details from response
-      const { transactionId, amounts, paymentResponse } = response.data;
-      
-      const { payment_session_id } = paymentResponse.paymentData;
-
-      // Validate payment session ID
-      if (!payment_session_id) {
-        console.error('Payment session ID is missing!');
-        throw new Error('Payment session ID not received from server');
-      }
-
-      console.log('Opening Cashfree payment gateway...');
-      console.log('Transaction ID:', transactionId);
-      console.log('Final Amount:', amounts.finalAmount);
-      console.log('Payment Session ID:', payment_session_id);
-
-      // Open Cashfree payment gateway
-      await paymentApi.processCashfreePayment(
-        transactionId,
-        payment_session_id,
-        {
-          onSuccess: async (data) => {
-            console.log('Payment successful:', data);
-            setIsProcessing(false);
-            
-            toast.success(`₹${amounts.creditAmount} has been added to your wallet!`);
-
-            // Reset form
-            setAmount('');
-            setSelectedPaymentMethod('upi');
-
-            // Navigate back after short delay
-            setTimeout(() => {
-              navigate('/wallet');
-            }, 1500);
-          },
-          onFailure: (error) => {
-            console.error('Payment failed:', error);
-            setIsProcessing(false);
-            
-            toast.error(error.error?.message || 'Payment was not completed. Please try again.');
-          },
-          onError: (error) => {
-            console.error('Payment error:', error);
-            setIsProcessing(false);
-            
-            toast.error('An error occurred during payment. Please try again.');
-          },
-        }
-      );
-    } catch (error: any) {
-      console.error('Wallet topup error:', error);
-      setIsProcessing(false);
-      
-      toast.error(error.response?.data?.message || error.message || 'Failed to initiate payment. Please try again.');
-    }
+    // Redirect to Guest Topup page with the selected amount
+    navigate('/guest-topup', { 
+      state: { 
+        prefilledAmount: parseFloat(amount) 
+      } 
+    });
   };
 
   return (
@@ -243,7 +175,7 @@ const AddMoney: React.FC = () => {
           </div>
           
           <p className="text-sm text-gray-500 mt-3 text-center">
-            Minimum: ₹200 | Maximum: ₹1,00,000
+            Minimum: ₹{MIN_DEPOSIT_AMOUNT} | Maximum: ₹1,00,000
           </p>
         </div>
 
@@ -326,7 +258,7 @@ const AddMoney: React.FC = () => {
           <div className="text-sm text-amber-800">
             <p className="font-semibold mb-1">Important Information</p>
             <ul className="space-y-1 list-disc list-inside">
-              <li>Minimum topup amount is ₹200</li>
+              <li>Minimum topup amount is ₹{MIN_DEPOSIT_AMOUNT}</li>
               <li>GST will be added to the amount</li>
               <li>Money will be credited instantly after successful payment</li>
               <li>For any issues, contact support</li>
@@ -337,20 +269,13 @@ const AddMoney: React.FC = () => {
         {/* Add Money Button */}
         <button
           onClick={handleAddMoney}
-          disabled={isProcessing || !amount || parseFloat(amount) < 200}
+          disabled={!amount || parseFloat(amount) < MIN_DEPOSIT_AMOUNT}
           className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold text-lg rounded-xl shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all"
         >
-          {isProcessing ? (
-            <div className="flex items-center justify-center gap-2">
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              Processing...
-            </div>
-          ) : (
-            <div className="flex items-center justify-center gap-2">
-              <Banknote className="w-6 h-6" />
-              Add ₹{amount || '0'} to Wallet
-            </div>
-          )}
+          <div className="flex items-center justify-center gap-2">
+            <Banknote className="w-6 h-6" />
+            Add ₹{amount || '0'} to Wallet
+          </div>
         </button>
 
         {/* Security Badge */}

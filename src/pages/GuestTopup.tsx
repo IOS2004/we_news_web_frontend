@@ -1,34 +1,53 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import Input from '@/components/common/Input';
-import { ArrowLeft, User, Mail, Calendar, Lock, Shield, CheckCircle, Phone } from 'lucide-react';
+import { ArrowLeft, Mail, Calendar, Lock, Shield, CheckCircle, Wallet } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { walletService } from '@/services/walletApi';
+import paymentApi from '@/services/paymentApi';
 
 interface GuestUserData {
   email: string;
   dateOfBirth: string;
   password: string;
-  confirmPassword: string;
   firstName?: string;
   lastName?: string;
   phoneNumber?: string;
+  amount: number;
 }
+
+// Predefined amounts for quick selection
+const quickAmounts = [100, 500, 1000, 2000, 5000, 10000];
+
+// Minimum deposit amount
+const MIN_DEPOSIT_AMOUNT = 0;
 
 export default function GuestTopup() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [formData, setFormData] = useState<GuestUserData>({
     email: '',
     dateOfBirth: '',
     password: '',
-    confirmPassword: '',
     firstName: '',
     lastName: '',
     phoneNumber: '',
+    amount: 0,
   });
   const [errors, setErrors] = useState<Partial<GuestUserData>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Prefill amount if passed from AddMoney page
+  useEffect(() => {
+    const locationState = location.state as { prefilledAmount?: number };
+    if (locationState?.prefilledAmount) {
+      const amount = locationState.prefilledAmount;
+      setFormData(prev => ({ ...prev, amount }));
+      toast.success(`Amount ₹${amount} selected. Complete the form to proceed.`);
+    }
+  }, [location]);
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -36,7 +55,16 @@ export default function GuestTopup() {
   };
 
   const validateAge = (dob: string): boolean => {
+    if (!dob) return false;
+    
     const birthDate = new Date(dob);
+    
+    // Check if date is valid
+    if (isNaN(birthDate.getTime())) {
+      console.log('Invalid date format:', dob);
+      return false;
+    }
+    
     const today = new Date();
     const age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
@@ -45,12 +73,6 @@ export default function GuestTopup() {
       return age - 1 >= 18;
     }
     return age >= 18;
-  };
-
-  const validatePassword = (password: string): boolean => {
-    // At least 8 characters, one uppercase, one lowercase, one number
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
-    return passwordRegex.test(password);
   };
 
   const validatePhoneNumber = (phone: string): boolean => {
@@ -63,39 +85,43 @@ export default function GuestTopup() {
   const validateForm = (): boolean => {
     const newErrors: Partial<GuestUserData> = {};
 
+    console.log('=== VALIDATING FORM ===');
+    console.log('Email:', formData.email, 'Valid:', validateEmail(formData.email));
+    console.log('DOB:', formData.dateOfBirth, 'Valid:', validateAge(formData.dateOfBirth));
+    console.log('Password:', formData.password ? '****' : 'EMPTY');
+    console.log('Phone:', formData.phoneNumber || 'NOT PROVIDED', 'Valid:', formData.phoneNumber ? validatePhoneNumber(formData.phoneNumber) : 'N/A');
+
     // Email validation
     if (!formData.email) {
       newErrors.email = 'Email is required';
+      console.log('❌ Email is required');
     } else if (!validateEmail(formData.email)) {
       newErrors.email = 'Please enter a valid email address';
+      console.log('❌ Invalid email format');
     }
 
     // Date of Birth validation
     if (!formData.dateOfBirth) {
       newErrors.dateOfBirth = 'Date of birth is required';
+      console.log('❌ DOB is required');
     } else if (!validateAge(formData.dateOfBirth)) {
       newErrors.dateOfBirth = 'You must be at least 18 years old';
+      console.log('❌ Age validation failed');
     }
 
     // Password validation
     if (!formData.password) {
       newErrors.password = 'Password is required';
-    } else if (!validatePassword(formData.password)) {
-      newErrors.password = 'Password must be at least 8 characters with uppercase, lowercase, and number';
-    }
-
-    // Confirm password validation
-    if (!formData.confirmPassword) {
-      newErrors.confirmPassword = 'Please confirm your password';
-    } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
+      console.log('❌ Password is required');
     }
 
     // Phone number validation (optional)
     if (formData.phoneNumber && !validatePhoneNumber(formData.phoneNumber)) {
       newErrors.phoneNumber = 'Please enter a valid 10-digit phone number';
+      console.log('❌ Invalid phone number');
     }
 
+    console.log('Validation errors:', newErrors);
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -103,42 +129,145 @@ export default function GuestTopup() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateForm()) {
+    console.log('=== FORM SUBMISSION START ===');
+    console.log('Form submitted with data:', formData);
+    console.log('Current errors before validation:', errors);
+
+    const isValid = validateForm();
+    console.log('Validation result:', isValid);
+    
+    if (!isValid) {
+      console.log('Form validation failed, errors:', errors);
       toast.error('Please fix the errors in the form');
       return;
     }
 
+    console.log('Form validation passed');
+
+    // Validate amount
+    if (!formData.amount || formData.amount < MIN_DEPOSIT_AMOUNT) {
+      console.log('Amount validation failed:', formData.amount);
+      toast.error(`Please enter amount (minimum ₹${MIN_DEPOSIT_AMOUNT})`);
+      return;
+    }
+
+    if (formData.amount > 100000) {
+      console.log('Amount too high:', formData.amount);
+      toast.error('Maximum amount is ₹1,00,000');
+      return;
+    }
+
+    console.log('All validations passed, calling API...');
     setIsSubmitting(true);
 
     try {
-      // Store guest user data in sessionStorage for the add money page
-      const guestData = {
+      console.log('Calling guestTopup API with data:', {
         email: formData.email,
-        dateOfBirth: formData.dateOfBirth,
         password: formData.password,
-        isGuestTopup: true,
+        dateOfBirth: formData.dateOfBirth,
+        amount: formData.amount,
+        paymentMethod: 'cashfree',
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        phoneNumber: formData.phoneNumber,
+      });
+      console.log('Date format being sent:', formData.dateOfBirth);
+      console.log('Expected format: YYYY-MM-DD (e.g., 1995-05-15)');
+
+      // Call the guest topup API
+      const response = await walletService.guestTopup({
+        email: formData.email,
+        password: formData.password,
+        dateOfBirth: formData.dateOfBirth,
+        amount: formData.amount,
+        paymentMethod: 'cashfree',
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        phoneNumber: formData.phoneNumber,
+      });
+
+      console.log('Guest topup API response:', response);
+
+      // Validate response structure
+      if (!response || !response.paymentResponse || !response.paymentResponse.paymentData) {
+        console.error('Invalid API response structure:', response);
+        throw new Error('Invalid response from server');
+      }
+
+      // Extract payment session ID
+      const { payment_session_id } = response.paymentResponse.paymentData;
+      const { transactionId, amounts } = response;
+
+      if (!payment_session_id) {
+        console.error('Payment session ID missing in response');
+        throw new Error('Payment session ID not received');
+      }
+
+      console.log('Payment session ID received:', payment_session_id);
+      console.log('Transaction ID:', transactionId);
+
+      // Store transaction details in sessionStorage
+      sessionStorage.setItem('guestTopupTransaction', JSON.stringify({
+        transactionId,
+        amounts,
+        userDetails: response.userDetails,
         timestamp: new Date().toISOString(),
-      };
+      }));
 
-      sessionStorage.setItem('guestTopupData', JSON.stringify(guestData));
+      toast.success('Redirecting to payment gateway...');
 
-      toast.success('Details verified! Proceeding to payment...');
+      // Open Cashfree payment gateway
+      await paymentApi.processCashfreePayment(
+        transactionId,
+        payment_session_id,
+        {
+          onSuccess: async (data) => {
+            console.log('Payment successful:', data);
+            setIsSubmitting(false);
+            
+            toast.success(`₹${amounts.creditAmount} has been added to your wallet!`);
 
-      // Navigate to add money page
-      setTimeout(() => {
-        navigate('/add-money', { state: { isGuest: true } });
-      }, 500);
+            // Show success message with option to create account
+            setTimeout(() => {
+              navigate('/payment-success', { 
+                state: { 
+                  isGuest: true, 
+                  email: formData.email,
+                  amount: amounts.creditAmount 
+                } 
+              });
+            }, 1500);
+          },
+          onFailure: (error) => {
+            console.error('Payment failed:', error);
+            setIsSubmitting(false);
+            
+            toast.error(error.error?.message || 'Payment was not completed. Please try again.');
+          },
+          onError: (error) => {
+            console.error('Payment error:', error);
+            setIsSubmitting(false);
+            
+            toast.error('An error occurred during payment. Please try again.');
+          },
+        }
+      );
 
     } catch (error: any) {
       console.error('Error processing guest topup:', error);
-      toast.error('Failed to process your request. Please try again.');
-    } finally {
       setIsSubmitting(false);
+      toast.error(error.response?.data?.message || error.message || 'Failed to process your request. Please try again.');
     }
   };
 
   const handleChange = (field: keyof GuestUserData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    // Handle amount field specifically to convert to number
+    if (field === 'amount') {
+      const numValue = value === '' ? 0 : parseFloat(value);
+      setFormData(prev => ({ ...prev, [field]: numValue }));
+    } else {
+      setFormData(prev => ({ ...prev, [field]: value }));
+    }
     // Clear error for this field when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: undefined }));
@@ -162,11 +291,11 @@ export default function GuestTopup() {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full mb-4">
-            <User className="w-8 h-8 text-white" />
+            <Shield className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Guest Top-up</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Verify & Add Money</h1>
           <p className="text-gray-600">
-            Enter your details to proceed with wallet top-up without creating an account
+            Verify your account details to proceed with wallet top-up
           </p>
         </div>
 
@@ -175,10 +304,10 @@ export default function GuestTopup() {
           <div className="flex items-start gap-3">
             <Shield className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
             <div className="flex-1">
-              <h3 className="font-semibold text-blue-900 mb-1">Quick & Secure</h3>
+              <h3 className="font-semibold text-blue-900 mb-1">Account Verification Required</h3>
               <p className="text-sm text-blue-700">
-                Your information is securely stored and used only for this transaction. 
-                You can create a full account later to track your transactions.
+                Please verify your account by entering your registered email, password, and date of birth. 
+                This ensures secure access to your wallet for adding funds.
               </p>
             </div>
           </div>
@@ -211,66 +340,54 @@ export default function GuestTopup() {
               )}
             </div>
 
-            {/* First Name (Optional) */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <div className="flex items-center gap-2">
-                  <User className="w-4 h-4" />
-                  First Name <span className="text-gray-400 text-xs ml-1">(Optional)</span>
-                </div>
-              </label>
-              <Input
-                type="text"
-                placeholder="Enter your first name"
-                value={formData.firstName}
-                onChange={(e) => handleChange('firstName', e.target.value)}
-                fullWidth
-              />
-            </div>
+            {/* Optional fields removed - This is verification only, not signup */}
 
-            {/* Last Name (Optional) */}
+            {/* Amount to Add */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <div className="flex items-center gap-2">
-                  <User className="w-4 h-4" />
-                  Last Name <span className="text-gray-400 text-xs ml-1">(Optional)</span>
+                  <Wallet className="w-4 h-4" />
+                  Amount to Add
                 </div>
               </label>
-              <Input
-                type="text"
-                placeholder="Enter your last name"
-                value={formData.lastName}
-                onChange={(e) => handleChange('lastName', e.target.value)}
-                fullWidth
-              />
-            </div>
-
-            {/* Phone Number (Optional) */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <div className="flex items-center gap-2">
-                  <Phone className="w-4 h-4" />
-                  Phone Number <span className="text-gray-400 text-xs ml-1">(Optional)</span>
-                </div>
-              </label>
-              <Input
-                type="tel"
-                placeholder="Enter your 10-digit phone number"
-                value={formData.phoneNumber}
-                onChange={(e) => handleChange('phoneNumber', e.target.value)}
-                error={errors.phoneNumber}
-                fullWidth
-                maxLength={10}
-              />
-              {!errors.phoneNumber && formData.phoneNumber && validatePhoneNumber(formData.phoneNumber) && (
-                <div className="flex items-center gap-1 text-sm text-green-600 mt-1">
-                  <CheckCircle className="w-4 h-4" />
-                  Valid phone number
-                </div>
-              )}
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl font-bold text-gray-400">
+                  ₹
+                </span>
+                <Input
+                  type="number"
+                  placeholder="Enter amount"
+                  value={formData.amount || ''}
+                  onChange={(e) => handleChange('amount', e.target.value)}
+                  fullWidth
+                  className="pl-12"
+                  min={MIN_DEPOSIT_AMOUNT.toString()}
+                  max="100000"
+                />
+              </div>
               <p className="text-xs text-gray-500 mt-1">
-                Enter a valid 10-digit Indian mobile number
+                Minimum: ₹{MIN_DEPOSIT_AMOUNT} | Maximum: ₹1,00,000
               </p>
+              
+              {/* Quick Amount Selection */}
+              <div className="grid grid-cols-3 gap-2 mt-3">
+                {quickAmounts.map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => handleChange('amount', value.toString())}
+                    className={`
+                      py-2 px-3 rounded-lg font-semibold text-sm transition-all
+                      ${formData.amount === value
+                        ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-md scale-105'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
+                      }
+                    `}
+                  >
+                    ₹{value.toLocaleString()}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Date of Birth */}
@@ -299,68 +416,17 @@ export default function GuestTopup() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <div className="flex items-center gap-2">
                   <Lock className="w-4 h-4" />
-                  Create Password
+                  Password
                 </div>
               </label>
               <Input
                 type="password"
-                placeholder="Enter a secure password"
+                placeholder="Enter your password"
                 value={formData.password}
                 onChange={(e) => handleChange('password', e.target.value)}
                 error={errors.password}
                 fullWidth
               />
-              <div className="mt-2 space-y-1">
-                <div className={`flex items-center gap-2 text-xs ${
-                  formData.password.length >= 8 ? 'text-green-600' : 'text-gray-400'
-                }`}>
-                  <CheckCircle className="w-3 h-3" />
-                  At least 8 characters
-                </div>
-                <div className={`flex items-center gap-2 text-xs ${
-                  /[A-Z]/.test(formData.password) ? 'text-green-600' : 'text-gray-400'
-                }`}>
-                  <CheckCircle className="w-3 h-3" />
-                  One uppercase letter
-                </div>
-                <div className={`flex items-center gap-2 text-xs ${
-                  /[a-z]/.test(formData.password) ? 'text-green-600' : 'text-gray-400'
-                }`}>
-                  <CheckCircle className="w-3 h-3" />
-                  One lowercase letter
-                </div>
-                <div className={`flex items-center gap-2 text-xs ${
-                  /\d/.test(formData.password) ? 'text-green-600' : 'text-gray-400'
-                }`}>
-                  <CheckCircle className="w-3 h-3" />
-                  One number
-                </div>
-              </div>
-            </div>
-
-            {/* Confirm Password */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <div className="flex items-center gap-2">
-                  <Lock className="w-4 h-4" />
-                  Confirm Password
-                </div>
-              </label>
-              <Input
-                type="password"
-                placeholder="Re-enter your password"
-                value={formData.confirmPassword}
-                onChange={(e) => handleChange('confirmPassword', e.target.value)}
-                error={errors.confirmPassword}
-                fullWidth
-              />
-              {!errors.confirmPassword && formData.confirmPassword && 
-               formData.password === formData.confirmPassword && (
-                <div className="flex items-center gap-1 text-sm text-green-600 mt-1">
-                  <CheckCircle className="w-4 h-4" />
-                  Passwords match
-                </div>
-              )}
             </div>
 
             {/* Terms */}
@@ -390,19 +456,6 @@ export default function GuestTopup() {
           </form>
         </Card>
 
-        {/* Already have account link */}
-        <div className="text-center mt-6">
-          <p className="text-gray-600">
-            Already have an account?{' '}
-            <button
-              onClick={() => navigate('/auth/signin')}
-              className="text-blue-600 hover:underline font-medium"
-            >
-              Sign in instead
-            </button>
-          </p>
-        </div>
-
         {/* Benefits */}
         <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="text-center p-4">
@@ -418,15 +471,15 @@ export default function GuestTopup() {
               <CheckCircle className="w-6 h-6 text-green-600" />
             </div>
             <h3 className="font-semibold text-gray-900 mb-1">Fast</h3>
-            <p className="text-sm text-gray-600">Instant top-up</p>
+            <p className="text-sm text-gray-600">Instant verification</p>
           </Card>
 
           <Card className="text-center p-4">
             <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
-              <User className="w-6 h-6 text-purple-600" />
+              <Wallet className="w-6 h-6 text-purple-600" />
             </div>
-            <h3 className="font-semibold text-gray-900 mb-1">Easy</h3>
-            <p className="text-sm text-gray-600">No registration needed</p>
+            <h3 className="font-semibold text-gray-900 mb-1">Quick</h3>
+            <p className="text-sm text-gray-600">Add money instantly</p>
           </Card>
         </div>
       </div>

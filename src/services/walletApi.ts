@@ -244,6 +244,78 @@ class WalletService {
     >(apiClient.get("/wallet/can-pay", { params: { amount } }));
     return response.data!;
   }
+
+  /**
+   * Guest user wallet top-up (standalone)
+   * Actual endpoint: POST /api/wallet/standalone/topup
+   */
+  async guestTopup(data: {
+    email: string;
+    password: string;
+    dateOfBirth: string;
+    amount: number;
+    paymentMethod: string;
+    firstName?: string;
+    lastName?: string;
+    phoneNumber?: string;
+  }): Promise<{
+    transactionId: string;
+    amounts: {
+      originalAmount: number;
+      discountAmount: number;
+      discountedAmount: number;
+      gstAmount: number;
+      finalAmount: number;
+      creditAmount: number;
+    };
+    paymentResponse: {
+      paymentGateway: string;
+      paymentUrl: string;
+      paymentData: {
+        payment_session_id: string;
+        cf_order_id: number;
+        order_id: string;
+        order_amount: number;
+        order_status: string;
+        [key: string]: any;
+      };
+    };
+    userDetails: {
+      userId: string;
+      name: string;
+      email: string;
+      phone: string;
+      referralCode: string;
+    };
+  }> {
+    console.log('=== GUEST TOPUP API CALL START ===');
+    console.log('Request data:', data);
+    console.log('API URL:', apiClient.defaults.baseURL + '/wallet/standalone/topup');
+    
+    try {
+      const response = await apiCall<
+        ApiResponse<{
+          transactionId: string;
+          amounts: any;
+          paymentResponse: any;
+          userDetails: any;
+        }>
+      >(apiClient.post("/wallet/standalone/topup", data), {
+        showLoading: true,
+        showSuccess: true,
+        successMessage: "Payment initiated! Redirecting to payment gateway...",
+      });
+
+      console.log('=== API RESPONSE SUCCESS ===');
+      console.log('Full response:', response);
+      console.log('Response data:', response.data);
+      return response.data!;
+    } catch (error) {
+      console.error('=== API CALL FAILED ===');
+      console.error('Error:', error);
+      throw error;
+    }
+  }
 }
 
 export const walletService = new WalletService();
