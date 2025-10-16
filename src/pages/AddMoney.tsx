@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { 
   Wallet, 
@@ -51,9 +51,29 @@ const paymentMethods = [
 
 const AddMoney: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [amount, setAmount] = useState('');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('upi');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isGuest, setIsGuest] = useState(false);
+  const [guestEmail, setGuestEmail] = useState('');
+
+  // Check if this is a guest topup
+  useEffect(() => {
+    const locationState = location.state as { isGuest?: boolean };
+    const guestData = sessionStorage.getItem('guestTopupData');
+    
+    if (locationState?.isGuest && guestData) {
+      const parsedData = JSON.parse(guestData);
+      setIsGuest(true);
+      setGuestEmail(parsedData.email);
+      toast.success(`Welcome, ${parsedData.email}! Complete your payment below.`);
+    } else if (locationState?.isGuest && !guestData) {
+      // If marked as guest but no data, redirect to guest form
+      toast.error('Please complete the guest form first');
+      navigate('/guest-topup');
+    }
+  }, [location, navigate]);
 
   const handleQuickAmount = (value: number) => {
     setAmount(value.toString());
@@ -190,6 +210,20 @@ const AddMoney: React.FC = () => {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Guest User Banner */}
+        {isGuest && (
+          <div className="bg-gradient-to-r from-purple-100 to-blue-100 border-2 border-purple-300 rounded-xl p-4 mb-6 flex items-start gap-3">
+            <CheckCircle2 className="w-6 h-6 text-purple-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="font-semibold text-purple-900 mb-1">Guest Top-up Mode</h3>
+              <p className="text-sm text-purple-700">
+                You're adding money as a guest user ({guestEmail}). 
+                After payment, you can create a full account to track your transactions.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Amount Input Section */}
         <div className="bg-white rounded-2xl shadow-xl p-6 mb-6 border border-gray-100">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Enter Amount</h2>
