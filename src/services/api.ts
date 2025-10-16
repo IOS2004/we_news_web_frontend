@@ -6,6 +6,7 @@ import type { ApiResponse } from "@/types";
 const api: AxiosInstance = axios.create({
   baseURL: config.apiBaseUrl,
   timeout: 60000, // Increased to 60 seconds for slow Render.com cold starts
+  withCredentials: true, // Enable credentials for CORS
   headers: {
     "Content-Type": "application/json",
   },

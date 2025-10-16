@@ -10,6 +10,7 @@ const API_TIMEOUT = 60000; // 60 seconds for cold starts
 export const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   timeout: API_TIMEOUT,
+  withCredentials: true, // Enable credentials for CORS
   headers: {
     "Content-Type": "application/json",
   },
