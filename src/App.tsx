@@ -10,6 +10,10 @@ import AuthLayout from './layouts/AuthLayout'
 import SignIn from './pages/auth/SignIn'
 import SignUp from './pages/auth/SignUp'
 
+// Guest Pages (public)
+import GuestTopup from './pages/GuestTopup'
+import PublicLanding from './pages/PublicLanding'
+
 // Main Pages
 import Dashboard from './pages/Dashboard'
 import News from './pages/News'
@@ -17,13 +21,13 @@ import NewsDetail from './pages/NewsDetail'
 import Trading from './pages/Trading'
 import NumberTrading from './pages/NumberTrading'
 import Wallet from './pages/Wallet'
+import AddMoney from './pages/AddMoney'
 import Profile from './pages/Profile'
 import EditProfile from './pages/EditProfile'
 import Network from './pages/Network'
 import Plans from './pages/Plans'
 import Settings from './pages/Settings'
 import Withdrawals from './pages/Withdrawals'
-import AddMoney from './pages/AddMoney'
 import MyTrades from './pages/MyTrades'
 import Earnings from './pages/Earnings'
 import Redeem from './pages/Redeem'
@@ -37,6 +41,11 @@ function App() {
     <AuthProvider>
       <WalletProvider>
         <Routes>
+          {/* Public Routes - No Auth Required */}
+          <Route path="/landing" element={<PublicLanding />} />
+          <Route path="/guest-topup" element={<GuestTopup />} />
+          <Route path="/add-money" element={<AddMoney />} />
+
           {/* Auth Routes */}
           <Route element={<AuthLayout />}>
             <Route path="/auth/signin" element={<SignIn />} />
@@ -62,7 +71,6 @@ function App() {
             <Route path="/trading/number" element={<NumberTrading />} />
             <Route path="/trading/history" element={<MyTrades />} />
             <Route path="/wallet" element={<Wallet />} />
-            <Route path="/add-money" element={<AddMoney />} />
             <Route path="/earnings" element={<Earnings />} />
             <Route path="/redeem" element={<Redeem />} />
             <Route path="/rewards" element={<Rewards />} />
