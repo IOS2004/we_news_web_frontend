@@ -1,14 +1,25 @@
-import { apiClient, apiCall, ApiResponse, PaginatedResponse } from './apiClient';
+import {
+  apiClient,
+  apiCall,
+  ApiResponse,
+  PaginatedResponse,
+} from "./apiClient";
 
 // Types
 export interface DailyEarning {
   id: string;
   userId: string;
   amount: number;
-  source: 'referral' | 'investment' | 'daily_login' | 'trading' | 'task' | 'bonus';
+  source:
+    | "referral"
+    | "investment"
+    | "daily_login"
+    | "trading"
+    | "task"
+    | "bonus";
   description: string;
   date: string;
-  status: 'pending' | 'credited';
+  status: "pending" | "credited";
   createdAt: string;
 }
 
@@ -83,12 +94,12 @@ class EarningsService {
     limit?: number;
     source?: string;
   }): Promise<PaginatedResponse<DailyEarning>> {
-    const response = await apiCall<ApiResponse<{
-      earnings: DailyEarning[];
-      pagination: any;
-    }>>(
-      apiClient.get('/earnings/daily', { params })
-    );
+    const response = await apiCall<
+      ApiResponse<{
+        earnings: DailyEarning[];
+        pagination: any;
+      }>
+    >(apiClient.get("/earnings/daily", { params }));
 
     return {
       items: response.data!.earnings || [],
@@ -102,7 +113,7 @@ class EarningsService {
    */
   async getTodayEarnings(): Promise<TodayEarning> {
     const response = await apiCall<ApiResponse<TodayEarning>>(
-      apiClient.get('/earnings/today')
+      apiClient.get("/earnings/today")
     );
     return response.data!;
   }
@@ -111,9 +122,12 @@ class EarningsService {
    * Get earnings summary for date range
    * Actual endpoint: GET /api/earnings/summary?startDate=...&endDate=...
    */
-  async getEarningsSummary(startDate: string, endDate: string): Promise<EarningsSummary> {
+  async getEarningsSummary(
+    startDate: string,
+    endDate: string
+  ): Promise<EarningsSummary> {
     const response = await apiCall<ApiResponse<EarningsSummary>>(
-      apiClient.get('/earnings/summary', { params: { startDate, endDate } })
+      apiClient.get("/earnings/summary", { params: { startDate, endDate } })
     );
     return response.data!;
   }
@@ -124,7 +138,7 @@ class EarningsService {
    */
   async getUserLevel(): Promise<UserLevel> {
     const response = await apiCall<ApiResponse<UserLevel>>(
-      apiClient.get('/earnings/level')
+      apiClient.get("/earnings/level")
     );
     return response.data!;
   }
@@ -139,7 +153,7 @@ class EarningsService {
     description?: string;
   }): Promise<any> {
     const response = await apiCall<ApiResponse<any>>(
-      apiClient.post('/earnings/experience', data),
+      apiClient.post("/earnings/experience", data),
       {
         showLoading: false,
         showSuccess: false,
@@ -154,7 +168,7 @@ class EarningsService {
    */
   async getLevelRewards(): Promise<LevelReward[]> {
     const response = await apiCall<ApiResponse<{ rewards: LevelReward[] }>>(
-      apiClient.get('/earnings/rewards')
+      apiClient.get("/earnings/rewards")
     );
     return response.data!.rewards || [];
   }
@@ -165,11 +179,11 @@ class EarningsService {
    */
   async processDailyLoginReward(): Promise<any> {
     const response = await apiCall<ApiResponse<any>>(
-      apiClient.post('/earnings/daily-login'),
+      apiClient.post("/earnings/daily-login"),
       {
         showLoading: false,
         showSuccess: true,
-        successMessage: 'Daily login reward claimed!',
+        successMessage: "Daily login reward claimed!",
       }
     );
     return response.data!;
@@ -181,7 +195,7 @@ class EarningsService {
    */
   async getEarningsStats(): Promise<EarningsStats> {
     const response = await apiCall<ApiResponse<EarningsStats>>(
-      apiClient.get('/earnings/stats')
+      apiClient.get("/earnings/stats")
     );
     return response.data!;
   }
@@ -193,7 +207,7 @@ class EarningsService {
     const endDate = new Date();
     const startDate = new Date();
     startDate.setDate(endDate.getDate() - 7);
-    
+
     return this.getEarningsSummary(
       startDate.toISOString(),
       endDate.toISOString()
@@ -207,7 +221,7 @@ class EarningsService {
     const endDate = new Date();
     const startDate = new Date();
     startDate.setDate(1); // First day of month
-    
+
     return this.getEarningsSummary(
       startDate.toISOString(),
       endDate.toISOString()
@@ -217,10 +231,13 @@ class EarningsService {
   /**
    * Get earnings by source
    */
-  async getEarningsBySource(source: string, params?: {
-    page?: number;
-    limit?: number;
-  }): Promise<PaginatedResponse<DailyEarning>> {
+  async getEarningsBySource(
+    source: string,
+    params?: {
+      page?: number;
+      limit?: number;
+    }
+  ): Promise<PaginatedResponse<DailyEarning>> {
     return this.getDailyEarnings({ ...params, source });
   }
 }

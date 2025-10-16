@@ -1,4 +1,4 @@
-import { apiClient, apiCall, ApiResponse } from './apiClient';
+import { apiClient, apiCall, ApiResponse } from "./apiClient";
 
 // Types
 export interface User {
@@ -7,7 +7,7 @@ export interface User {
   email: string;
   firstName: string;
   lastName: string;
-  role: 'user' | 'admin';
+  role: "user" | "admin";
   referralCode: string;
   totalReferrals: number;
   referralEarnings: number;
@@ -49,19 +49,19 @@ class AuthService {
    */
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     const response = await apiCall<ApiResponse<AuthResponse>>(
-      apiClient.post('/auth/login', credentials),
+      apiClient.post("/auth/login", credentials),
       {
         showLoading: true,
         showSuccess: true,
-        successMessage: 'Login successful!',
+        successMessage: "Login successful!",
       }
     );
-    
+
     // Store token and user in localStorage
     const { token, user } = response.data!;
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(user));
-    
+    localStorage.setItem("token", token);
+    localStorage.setItem("user", JSON.stringify(user));
+
     return response.data!;
   }
 
@@ -70,19 +70,19 @@ class AuthService {
    */
   async signup(data: SignupData): Promise<AuthResponse> {
     const response = await apiCall<ApiResponse<AuthResponse>>(
-      apiClient.post('/auth/signup', data),
+      apiClient.post("/auth/signup", data),
       {
         showLoading: true,
         showSuccess: true,
-        successMessage: 'Registration successful! Welcome aboard!',
+        successMessage: "Registration successful! Welcome aboard!",
       }
     );
-    
+
     // Store token and user in localStorage
     const { token, user } = response.data!;
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(user));
-    
+    localStorage.setItem("token", token);
+    localStorage.setItem("user", JSON.stringify(user));
+
     return response.data!;
   }
 
@@ -90,9 +90,9 @@ class AuthService {
    * Logout user
    */
   logout(): void {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    window.location.href = '/login';
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    window.location.href = "/login";
   }
 
   /**
@@ -100,7 +100,7 @@ class AuthService {
    */
   async getMe(): Promise<User> {
     const response = await apiCall<ApiResponse<{ user: User }>>(
-      apiClient.get('/auth/me')
+      apiClient.get("/auth/me")
     );
     return response.data!.user;
   }
@@ -110,12 +110,12 @@ class AuthService {
    */
   async refreshToken(): Promise<string> {
     const response = await apiCall<ApiResponse<{ token: string }>>(
-      apiClient.post('/auth/refresh')
+      apiClient.post("/auth/refresh")
     );
-    
+
     const { token } = response.data!;
-    localStorage.setItem('token', token);
-    
+    localStorage.setItem("token", token);
+
     return token;
   }
 
@@ -126,21 +126,18 @@ class AuthService {
     currentPassword: string;
     newPassword: string;
   }): Promise<void> {
-    await apiCall<ApiResponse>(
-      apiClient.post('/auth/change-password', data),
-      {
-        showLoading: true,
-        showSuccess: true,
-        successMessage: 'Password changed successfully!',
-      }
-    );
+    await apiCall<ApiResponse>(apiClient.post("/auth/change-password", data), {
+      showLoading: true,
+      showSuccess: true,
+      successMessage: "Password changed successfully!",
+    });
   }
 
   /**
    * Check if user is authenticated
    */
   isAuthenticated(): boolean {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     return !!token;
   }
 
@@ -148,9 +145,9 @@ class AuthService {
    * Get stored user from localStorage
    */
   getStoredUser(): User | null {
-    const userStr = localStorage.getItem('user');
+    const userStr = localStorage.getItem("user");
     if (!userStr) return null;
-    
+
     try {
       return JSON.parse(userStr);
     } catch {
@@ -162,7 +159,7 @@ class AuthService {
    * Get stored token from localStorage
    */
   getStoredToken(): string | null {
-    return localStorage.getItem('token');
+    return localStorage.getItem("token");
   }
 }
 

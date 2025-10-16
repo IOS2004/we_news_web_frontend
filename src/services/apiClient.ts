@@ -1,8 +1,9 @@
-import axios, { AxiosInstance, AxiosError } from 'axios';
-import toast from 'react-hot-toast';
+import axios, { AxiosInstance, AxiosError } from "axios";
+import toast from "react-hot-toast";
 
 // API Configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://wenews.onrender.com/api';
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL || "https://wenews.onrender.com/api";
 const API_TIMEOUT = 60000; // 60 seconds for cold starts
 
 // Create axios instance
@@ -10,14 +11,14 @@ export const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   timeout: API_TIMEOUT,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
 // Request interceptor - Add auth token
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -36,46 +37,46 @@ apiClient.interceptors.response.use(
   (error: AxiosError<any>) => {
     // Handle network errors
     if (!error.response) {
-      toast.error('Network error. Please check your connection.');
-      return Promise.reject(new Error('Network error'));
+      toast.error("Network error. Please check your connection.");
+      return Promise.reject(new Error("Network error"));
     }
 
     // Handle specific HTTP errors
     const status = error.response.status;
-    const message = error.response.data?.message || 'An error occurred';
+    const message = error.response.data?.message || "An error occurred";
 
     switch (status) {
       case 401:
         // Unauthorized - Clear auth and redirect to login
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        toast.error('Session expired. Please login again.');
-        window.location.href = '/login';
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        toast.error("Session expired. Please login again.");
+        window.location.href = "/login";
         break;
-      
+
       case 403:
-        toast.error('Access denied.');
+        toast.error("Access denied.");
         break;
-      
+
       case 404:
-        toast.error('Resource not found.');
+        toast.error("Resource not found.");
         break;
-      
+
       case 422:
         // Validation error
         toast.error(message);
         break;
-      
+
       case 429:
-        toast.error('Too many requests. Please try again later.');
+        toast.error("Too many requests. Please try again later.");
         break;
-      
+
       case 500:
       case 502:
       case 503:
-        toast.error('Server error. Please try again later.');
+        toast.error("Server error. Please try again later.");
         break;
-      
+
       default:
         toast.error(message);
     }
@@ -117,7 +118,7 @@ export async function apiCall<T>(
   const {
     showLoading = false,
     showSuccess = false,
-    successMessage = 'Success!',
+    successMessage = "Success!",
     showError = true,
   } = options || {};
 
@@ -125,7 +126,7 @@ export async function apiCall<T>(
 
   try {
     if (showLoading) {
-      loadingToast = toast.loading('Loading...');
+      loadingToast = toast.loading("Loading...");
     }
 
     const response = await promise;

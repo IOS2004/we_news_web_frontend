@@ -1,4 +1,4 @@
-import apiClient, { apiCall } from './apiClient';
+import apiClient, { apiCall } from "./apiClient";
 
 // Types
 export interface NewsArticle {
@@ -61,26 +61,27 @@ export const newsApi = {
     trending?: boolean;
     page?: number;
     limit?: number;
-    sort?: 'latest' | 'popular' | 'trending';
+    sort?: "latest" | "popular" | "trending";
   }) => {
     const params = new URLSearchParams();
-    if (filters?.category) params.append('category', filters.category);
-    if (filters?.search) params.append('search', filters.search);
-    if (filters?.trending) params.append('trending', 'true');
-    if (filters?.page) params.append('page', filters.page.toString());
-    if (filters?.limit) params.append('limit', filters.limit.toString());
-    if (filters?.sort) params.append('sort', filters.sort);
+    if (filters?.category) params.append("category", filters.category);
+    if (filters?.search) params.append("search", filters.search);
+    if (filters?.trending) params.append("trending", "true");
+    if (filters?.page) params.append("page", filters.page.toString());
+    if (filters?.limit) params.append("limit", filters.limit.toString());
+    if (filters?.sort) params.append("sort", filters.sort);
 
-    return apiCall<{ articles: NewsArticle[]; total: number; page: number; pages: number }>(
-      apiClient.get(`/news?${params.toString()}`)
-    );
+    return apiCall<{
+      articles: NewsArticle[];
+      total: number;
+      page: number;
+      pages: number;
+    }>(apiClient.get(`/news?${params.toString()}`));
   },
 
   // Get article by ID
   getArticleById: async (articleId: string) => {
-    return apiCall<NewsArticle>(
-      apiClient.get(`/news/${articleId}`)
-    );
+    return apiCall<NewsArticle>(apiClient.get(`/news/${articleId}`));
   },
 
   // Get trending articles
@@ -91,31 +92,34 @@ export const newsApi = {
   },
 
   // Get articles by category
-  getArticlesByCategory: async (category: string, page: number = 1, limit: number = 20) => {
-    return apiCall<{ articles: NewsArticle[]; total: number; page: number; pages: number }>(
-      apiClient.get(`/news/category/${category}?page=${page}&limit=${limit}`)
-    );
+  getArticlesByCategory: async (
+    category: string,
+    page: number = 1,
+    limit: number = 20
+  ) => {
+    return apiCall<{
+      articles: NewsArticle[];
+      total: number;
+      page: number;
+      pages: number;
+    }>(apiClient.get(`/news/category/${category}?page=${page}&limit=${limit}`));
   },
 
   // Get all categories
   getCategories: async () => {
-    return apiCall<NewsCategory[]>(
-      apiClient.get('/news/categories')
-    );
+    return apiCall<NewsCategory[]>(apiClient.get("/news/categories"));
   },
 
   // Get category by slug
   getCategoryBySlug: async (slug: string) => {
-    return apiCall<NewsCategory>(
-      apiClient.get(`/news/categories/${slug}`)
-    );
+    return apiCall<NewsCategory>(apiClient.get(`/news/categories/${slug}`));
   },
 
   // Like article
   likeArticle: async (articleId: string) => {
     return apiCall<{ liked: boolean; likesCount: number }>(
       apiClient.post(`/news/${articleId}/like`),
-      { showSuccess: true, successMessage: 'Article liked!' }
+      { showSuccess: true, successMessage: "Article liked!" }
     );
   },
 
@@ -123,7 +127,7 @@ export const newsApi = {
   unlikeArticle: async (articleId: string) => {
     return apiCall<{ liked: boolean; likesCount: number }>(
       apiClient.delete(`/news/${articleId}/like`),
-      { showSuccess: true, successMessage: 'Article unliked!' }
+      { showSuccess: true, successMessage: "Article unliked!" }
     );
   },
 
@@ -131,7 +135,7 @@ export const newsApi = {
   bookmarkArticle: async (articleId: string) => {
     return apiCall<{ bookmarked: boolean }>(
       apiClient.post(`/news/${articleId}/bookmark`),
-      { showSuccess: true, successMessage: 'Article bookmarked!' }
+      { showSuccess: true, successMessage: "Article bookmarked!" }
     );
   },
 
@@ -139,7 +143,7 @@ export const newsApi = {
   removeBookmark: async (articleId: string) => {
     return apiCall<{ bookmarked: boolean }>(
       apiClient.delete(`/news/${articleId}/bookmark`),
-      { showSuccess: true, successMessage: 'Bookmark removed!' }
+      { showSuccess: true, successMessage: "Bookmark removed!" }
     );
   },
 
@@ -148,17 +152,20 @@ export const newsApi = {
     category?: string;
     page?: number;
     limit?: number;
-    sort?: 'latest' | 'oldest';
+    sort?: "latest" | "oldest";
   }) => {
     const params = new URLSearchParams();
-    if (filters?.category) params.append('category', filters.category);
-    if (filters?.page) params.append('page', filters.page.toString());
-    if (filters?.limit) params.append('limit', filters.limit.toString());
-    if (filters?.sort) params.append('sort', filters.sort);
+    if (filters?.category) params.append("category", filters.category);
+    if (filters?.page) params.append("page", filters.page.toString());
+    if (filters?.limit) params.append("limit", filters.limit.toString());
+    if (filters?.sort) params.append("sort", filters.sort);
 
-    return apiCall<{ articles: BookmarkedArticle[]; total: number; page: number; pages: number }>(
-      apiClient.get(`/news/bookmarks?${params.toString()}`)
-    );
+    return apiCall<{
+      articles: BookmarkedArticle[];
+      total: number;
+      page: number;
+      pages: number;
+    }>(apiClient.get(`/news/bookmarks?${params.toString()}`));
   },
 
   // Track article view
@@ -170,13 +177,20 @@ export const newsApi = {
 
   // Get reading history
   getReadingHistory: async (page: number = 1, limit: number = 20) => {
-    return apiCall<{ history: ReadingHistory[]; total: number; page: number; pages: number }>(
-      apiClient.get(`/news/history?page=${page}&limit=${limit}`)
-    );
+    return apiCall<{
+      history: ReadingHistory[];
+      total: number;
+      page: number;
+      pages: number;
+    }>(apiClient.get(`/news/history?page=${page}&limit=${limit}`));
   },
 
   // Update reading progress
-  updateReadingProgress: async (articleId: string, progress: number, completed: boolean = false) => {
+  updateReadingProgress: async (
+    articleId: string,
+    progress: number,
+    completed: boolean = false
+  ) => {
     return apiCall<ReadingHistory>(
       apiClient.post(`/news/${articleId}/progress`, { progress, completed })
     );
@@ -184,34 +198,38 @@ export const newsApi = {
 
   // Clear reading history
   clearReadingHistory: async () => {
-    return apiCall<{ success: boolean }>(
-      apiClient.delete('/news/history'),
-      { showSuccess: true, successMessage: 'Reading history cleared!' }
-    );
+    return apiCall<{ success: boolean }>(apiClient.delete("/news/history"), {
+      showSuccess: true,
+      successMessage: "Reading history cleared!",
+    });
   },
 
   // Get news stats
   getStats: async () => {
-    return apiCall<NewsStats>(
-      apiClient.get('/news/stats')
-    );
+    return apiCall<NewsStats>(apiClient.get("/news/stats"));
   },
 
   // Search articles
-  searchArticles: async (query: string, filters?: {
-    category?: string;
-    page?: number;
-    limit?: number;
-  }) => {
+  searchArticles: async (
+    query: string,
+    filters?: {
+      category?: string;
+      page?: number;
+      limit?: number;
+    }
+  ) => {
     const params = new URLSearchParams();
-    params.append('q', query);
-    if (filters?.category) params.append('category', filters.category);
-    if (filters?.page) params.append('page', filters.page.toString());
-    if (filters?.limit) params.append('limit', filters.limit.toString());
+    params.append("q", query);
+    if (filters?.category) params.append("category", filters.category);
+    if (filters?.page) params.append("page", filters.page.toString());
+    if (filters?.limit) params.append("limit", filters.limit.toString());
 
-    return apiCall<{ articles: NewsArticle[]; total: number; page: number; pages: number }>(
-      apiClient.get(`/news/search?${params.toString()}`)
-    );
+    return apiCall<{
+      articles: NewsArticle[];
+      total: number;
+      page: number;
+      pages: number;
+    }>(apiClient.get(`/news/search?${params.toString()}`));
   },
 
   // Get related articles
@@ -222,17 +240,24 @@ export const newsApi = {
   },
 
   // Get popular articles
-  getPopularArticles: async (period: 'today' | 'week' | 'month' = 'week', limit: number = 10) => {
+  getPopularArticles: async (
+    period: "today" | "week" | "month" = "week",
+    limit: number = 10
+  ) => {
     return apiCall<NewsArticle[]>(
       apiClient.get(`/news/popular?period=${period}&limit=${limit}`)
     );
   },
 
   // Report article
-  reportArticle: async (articleId: string, reason: string, description?: string) => {
+  reportArticle: async (
+    articleId: string,
+    reason: string,
+    description?: string
+  ) => {
     return apiCall<{ success: boolean }>(
       apiClient.post(`/news/${articleId}/report`, { reason, description }),
-      { showSuccess: true, successMessage: 'Article reported!' }
+      { showSuccess: true, successMessage: "Article reported!" }
     );
   },
 

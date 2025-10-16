@@ -1,4 +1,9 @@
-import { apiClient, apiCall, ApiResponse, PaginatedResponse } from './apiClient';
+import {
+  apiClient,
+  apiCall,
+  ApiResponse,
+  PaginatedResponse,
+} from "./apiClient";
 
 // Types
 export interface ReferralStats {
@@ -22,7 +27,7 @@ export interface ReferredUser {
   lastName: string;
   email?: string;
   level: number;
-  status: 'active' | 'inactive';
+  status: "active" | "inactive";
   joinedAt: string;
   totalInvested: number;
   earnings: number;
@@ -50,7 +55,7 @@ export interface ReferralCommission {
   level: number;
   source: string;
   description: string;
-  status: 'pending' | 'credited';
+  status: "pending" | "credited";
   createdAt: string;
 }
 
@@ -62,7 +67,7 @@ class ReferralService {
    */
   async getStats(): Promise<ReferralStats> {
     const response = await apiCall<ApiResponse<ReferralStats>>(
-      apiClient.get('/referrals/info')
+      apiClient.get("/referrals/info")
     );
     return response.data!;
   }
@@ -75,14 +80,14 @@ class ReferralService {
     page?: number;
     limit?: number;
     level?: number;
-    status?: 'active' | 'inactive';
+    status?: "active" | "inactive";
   }): Promise<PaginatedResponse<ReferredUser>> {
-    const response = await apiCall<ApiResponse<{
-      referrals: ReferredUser[];
-      pagination: any;
-    }>>(
-      apiClient.get('/referrals/info', { params })
-    );
+    const response = await apiCall<
+      ApiResponse<{
+        referrals: ReferredUser[];
+        pagination: any;
+      }>
+    >(apiClient.get("/referrals/info", { params }));
 
     return {
       items: response.data!.referrals || [],
@@ -96,7 +101,7 @@ class ReferralService {
    */
   async getTree(maxDepth?: number): Promise<ReferralTree> {
     const response = await apiCall<ApiResponse<{ tree: ReferralTree }>>(
-      apiClient.get('/referrals/tree', { params: { levels: maxDepth || 5 } })
+      apiClient.get("/referrals/tree", { params: { levels: maxDepth || 5 } })
     );
     return response.data!.tree;
   }
@@ -109,16 +114,16 @@ class ReferralService {
     page?: number;
     limit?: number;
     level?: number;
-    status?: 'pending' | 'credited';
+    status?: "pending" | "credited";
     startDate?: string;
     endDate?: string;
   }): Promise<PaginatedResponse<ReferralCommission>> {
-    const response = await apiCall<ApiResponse<{
-      commissions: ReferralCommission[];
-      pagination: any;
-    }>>(
-      apiClient.get('/referrals/info', { params })
-    );
+    const response = await apiCall<
+      ApiResponse<{
+        commissions: ReferralCommission[];
+        pagination: any;
+      }>
+    >(apiClient.get("/referrals/info", { params }));
 
     return {
       items: response.data!.commissions || [],
@@ -132,7 +137,7 @@ class ReferralService {
    */
   async getReferralCode(): Promise<string> {
     const response = await apiCall<ApiResponse<{ referralCode: string }>>(
-      apiClient.get('/referrals/info')
+      apiClient.get("/referrals/info")
     );
     return response.data!.referralCode;
   }
@@ -164,16 +169,18 @@ class ReferralService {
    * Get earnings by level
    * Actual endpoint: GET /api/referrals/info (includes level breakdown)
    */
-  async getEarningsByLevel(): Promise<{
-    level: number;
-    count: number;
-    earnings: number;
-  }[]> {
-    const response = await apiCall<ApiResponse<{
-      levels: { level: number; count: number; earnings: number }[];
-    }>>(
-      apiClient.get('/referrals/info')
-    );
+  async getEarningsByLevel(): Promise<
+    {
+      level: number;
+      count: number;
+      earnings: number;
+    }[]
+  > {
+    const response = await apiCall<
+      ApiResponse<{
+        levels: { level: number; count: number; earnings: number }[];
+      }>
+    >(apiClient.get("/referrals/info"));
     return response.data!.levels || [];
   }
 
@@ -183,7 +190,7 @@ class ReferralService {
    */
   async getCommissionRates(): Promise<any> {
     const response = await apiCall<ApiResponse<any>>(
-      apiClient.get('/referrals/commission-rates')
+      apiClient.get("/referrals/commission-rates")
     );
     return response.data!;
   }

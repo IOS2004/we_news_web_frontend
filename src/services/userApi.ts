@@ -1,5 +1,5 @@
-import { apiClient, apiCall, ApiResponse } from './apiClient';
-import { User } from './authApi';
+import { apiClient, apiCall, ApiResponse } from "./apiClient";
+import { User } from "./authApi";
 
 // Types
 export interface UpdateProfileData {
@@ -38,7 +38,7 @@ class UserService {
    */
   async getProfile(): Promise<User> {
     const response = await apiCall<ApiResponse<{ user: User }>>(
-      apiClient.get('/user/profile')
+      apiClient.get("/user/profile")
     );
     return response.data!.user;
   }
@@ -48,18 +48,18 @@ class UserService {
    */
   async updateProfile(data: UpdateProfileData): Promise<User> {
     const response = await apiCall<ApiResponse<{ user: User }>>(
-      apiClient.put('/user/profile', data),
+      apiClient.put("/user/profile", data),
       {
         showLoading: true,
         showSuccess: true,
-        successMessage: 'Profile updated successfully!',
+        successMessage: "Profile updated successfully!",
       }
     );
-    
+
     // Update stored user in localStorage
     const updatedUser = response.data!.user;
-    localStorage.setItem('user', JSON.stringify(updatedUser));
-    
+    localStorage.setItem("user", JSON.stringify(updatedUser));
+
     return updatedUser;
   }
 
@@ -68,7 +68,7 @@ class UserService {
    */
   async getPreferences(): Promise<any> {
     const response = await apiCall<ApiResponse<{ preferences: any }>>(
-      apiClient.get('/user/preferences')
+      apiClient.get("/user/preferences")
     );
     return response.data!.preferences;
   }
@@ -82,11 +82,11 @@ class UserService {
     notifications?: boolean;
   }): Promise<any> {
     const response = await apiCall<ApiResponse<{ preferences: any }>>(
-      apiClient.put('/user/preferences', { preferences }),
+      apiClient.put("/user/preferences", { preferences }),
       {
         showLoading: true,
         showSuccess: true,
-        successMessage: 'Preferences updated!',
+        successMessage: "Preferences updated!",
       }
     );
     return response.data!.preferences;
@@ -99,12 +99,12 @@ class UserService {
     page?: number;
     limit?: number;
   }): Promise<{ articles: SavedArticle[]; pagination: any }> {
-    const response = await apiCall<ApiResponse<{
-      savedArticles: SavedArticle[];
-      pagination: any;
-    }>>(
-      apiClient.get('/user/saved-articles', { params })
-    );
+    const response = await apiCall<
+      ApiResponse<{
+        savedArticles: SavedArticle[];
+        pagination: any;
+      }>
+    >(apiClient.get("/user/saved-articles", { params }));
     return {
       articles: response.data!.savedArticles,
       pagination: response.data!.pagination,
@@ -116,10 +116,10 @@ class UserService {
    */
   async saveArticle(articleId: string): Promise<void> {
     await apiCall<ApiResponse>(
-      apiClient.post('/user/save-article', { articleId }),
+      apiClient.post("/user/save-article", { articleId }),
       {
         showSuccess: true,
-        successMessage: 'Article saved!',
+        successMessage: "Article saved!",
       }
     );
   }
@@ -132,7 +132,7 @@ class UserService {
       apiClient.delete(`/user/saved-articles/${articleId}`),
       {
         showSuccess: true,
-        successMessage: 'Article removed from saved!',
+        successMessage: "Article removed from saved!",
       }
     );
   }
@@ -144,12 +144,12 @@ class UserService {
     page?: number;
     limit?: number;
   }): Promise<{ history: ReadingHistory[]; pagination: any }> {
-    const response = await apiCall<ApiResponse<{
-      history: ReadingHistory[];
-      pagination: any;
-    }>>(
-      apiClient.get('/user/reading-history', { params })
-    );
+    const response = await apiCall<
+      ApiResponse<{
+        history: ReadingHistory[];
+        pagination: any;
+      }>
+    >(apiClient.get("/user/reading-history", { params }));
     return {
       history: response.data!.history,
       pagination: response.data!.pagination,
@@ -159,9 +159,12 @@ class UserService {
   /**
    * Add article to reading history
    */
-  async addToReadingHistory(articleId: string, timeSpent?: number): Promise<void> {
+  async addToReadingHistory(
+    articleId: string,
+    timeSpent?: number
+  ): Promise<void> {
     await apiCall<ApiResponse>(
-      apiClient.post('/user/reading-history', { articleId, timeSpent })
+      apiClient.post("/user/reading-history", { articleId, timeSpent })
     );
   }
 
@@ -170,18 +173,18 @@ class UserService {
    */
   async deleteAccount(password: string): Promise<void> {
     await apiCall<ApiResponse>(
-      apiClient.delete('/user/account', { data: { password } }),
+      apiClient.delete("/user/account", { data: { password } }),
       {
         showLoading: true,
         showSuccess: true,
-        successMessage: 'Account deleted successfully!',
+        successMessage: "Account deleted successfully!",
       }
     );
-    
+
     // Clear localStorage and redirect to login
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    window.location.href = '/login';
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    window.location.href = "/login";
   }
 }
 

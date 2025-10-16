@@ -1,4 +1,4 @@
-import { apiClient, apiCall, ApiResponse } from './apiClient';
+import { apiClient, apiCall, ApiResponse } from "./apiClient";
 
 // Types
 export interface DashboardOverview {
@@ -46,7 +46,7 @@ export interface QuickStats {
 }
 
 export interface EarningsSummary {
-  period: 'today' | 'week' | 'month';
+  period: "today" | "week" | "month";
   total: number;
   breakdown: {
     referrals: number;
@@ -95,7 +95,7 @@ class DashboardService {
    */
   async getOverview(): Promise<DashboardOverview> {
     const response = await apiCall<ApiResponse<DashboardOverview>>(
-      apiClient.get('/dashboard/overview')
+      apiClient.get("/dashboard/overview")
     );
     return response.data!;
   }
@@ -106,7 +106,7 @@ class DashboardService {
    */
   async getQuickStats(): Promise<QuickStats> {
     const response = await apiCall<ApiResponse<QuickStats>>(
-      apiClient.get('/dashboard/stats')
+      apiClient.get("/dashboard/stats")
     );
     return response.data!;
   }
@@ -115,9 +115,11 @@ class DashboardService {
    * Get earnings summary for a period
    * Actual endpoint: GET /api/dashboard/earnings?period=today|week|month
    */
-  async getEarningsSummary(period: 'today' | 'week' | 'month' = 'today'): Promise<EarningsSummary> {
+  async getEarningsSummary(
+    period: "today" | "week" | "month" = "today"
+  ): Promise<EarningsSummary> {
     const response = await apiCall<ApiResponse<EarningsSummary>>(
-      apiClient.get('/dashboard/earnings', { params: { period } })
+      apiClient.get("/dashboard/earnings", { params: { period } })
     );
     return response.data!;
   }
@@ -128,7 +130,7 @@ class DashboardService {
    */
   async getUserProgress(): Promise<UserProgress> {
     const response = await apiCall<ApiResponse<UserProgress>>(
-      apiClient.get('/dashboard/progress')
+      apiClient.get("/dashboard/progress")
     );
     return response.data!;
   }
@@ -137,21 +139,21 @@ class DashboardService {
    * Get today's earnings breakdown
    */
   async getTodayEarnings(): Promise<EarningsSummary> {
-    return this.getEarningsSummary('today');
+    return this.getEarningsSummary("today");
   }
 
   /**
    * Get this week's earnings breakdown
    */
   async getWeekEarnings(): Promise<EarningsSummary> {
-    return this.getEarningsSummary('week');
+    return this.getEarningsSummary("week");
   }
 
   /**
    * Get this month's earnings breakdown
    */
   async getMonthEarnings(): Promise<EarningsSummary> {
-    return this.getEarningsSummary('month');
+    return this.getEarningsSummary("month");
   }
 
   /**
@@ -167,7 +169,7 @@ class DashboardService {
     const [overview, stats, earnings, progress] = await Promise.all([
       this.getOverview(),
       this.getQuickStats(),
-      this.getEarningsSummary('today'),
+      this.getEarningsSummary("today"),
       this.getUserProgress(),
     ]);
 

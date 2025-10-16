@@ -11,17 +11,20 @@ Your app has been successfully built and is ready for deployment.
 ### Option 1: Vercel (Recommended)
 
 1. **Install Vercel CLI** (if not already installed):
+
    ```bash
    npm install -g vercel
    ```
 
 2. **Deploy to Vercel**:
+
    ```bash
    cd F:\WeNews\web-frontend
    vercel
    ```
 
 3. **Follow the prompts**:
+
    - Link to existing project or create new one
    - Set root directory: `./`
    - Build command: `npm run build`
@@ -40,17 +43,20 @@ Your app has been successfully built and is ready for deployment.
 ### Option 2: Netlify
 
 1. **Install Netlify CLI** (if not already installed):
+
    ```bash
    npm install -g netlify-cli
    ```
 
 2. **Deploy to Netlify**:
+
    ```bash
    cd F:\WeNews\web-frontend
    netlify deploy
    ```
 
 3. **Follow the prompts**:
+
    - Authorize Netlify
    - Create new site or link existing
    - Build directory: `dist`
@@ -69,6 +75,7 @@ Your app has been successfully built and is ready for deployment.
 1. **Build files are in**: `F:\WeNews\web-frontend\dist`
 
 2. **Upload to any static hosting**:
+
    - GitHub Pages
    - AWS S3 + CloudFront
    - Firebase Hosting
@@ -123,6 +130,7 @@ This will serve the production build at `http://localhost:4173`
 ## 📱 Mobile Testing
 
 After deployment, test on:
+
 - iOS Safari
 - Android Chrome
 - Different screen sizes (320px, 768px, 1024px, 1440px)
@@ -141,10 +149,12 @@ After deployment, test on:
 ## 🎯 Post-Deployment Tasks
 
 1. **Update Backend CORS**:
+
    - Add your deployed domain to allowed origins
    - Example: `https://wenews.vercel.app` or `https://wenews.netlify.app`
 
 2. **Test All Features**:
+
    - User authentication
    - News reading and rewards
    - Trading (color & number games)
@@ -154,6 +164,7 @@ After deployment, test on:
    - Profile updates
 
 3. **Monitor**:
+
    - Check deployment logs
    - Monitor API response times
    - Track user errors (consider adding Sentry)
@@ -169,6 +180,7 @@ After deployment, test on:
 ## 🛠️ Troubleshooting
 
 ### Build fails:
+
 ```bash
 rm -rf node_modules
 npm install
@@ -176,15 +188,18 @@ npm run build
 ```
 
 ### Routes not working after deployment:
+
 - Check `_redirects` file exists in `dist` folder
 - Verify SPA redirect configuration
 
 ### API calls failing:
+
 - Check CORS configuration on backend
 - Verify `VITE_API_URL` environment variable
 - Check network tab in browser dev tools
 
 ### Assets not loading:
+
 - Verify `base` in `vite.config.ts` is set correctly
 - Check asset paths in production build
 
@@ -193,6 +208,7 @@ npm run build
 ## 📞 Support
 
 If you encounter issues:
+
 1. Check deployment logs
 2. Verify environment variables
 3. Test API endpoints directly
@@ -203,6 +219,7 @@ If you encounter issues:
 ## 🎉 Deployment Complete!
 
 Once deployed, your WeNews web app will be live at:
+
 - **Vercel**: `https://your-project.vercel.app`
 - **Netlify**: `https://your-project.netlify.app`
 

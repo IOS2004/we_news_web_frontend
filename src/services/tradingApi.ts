@@ -1,11 +1,16 @@
-import { apiClient, apiCall, ApiResponse, PaginatedResponse } from './apiClient';
+import {
+  apiClient,
+  apiCall,
+  ApiResponse,
+  PaginatedResponse,
+} from "./apiClient";
 
 // Types
 export interface TradingRound {
   id: string;
-  gameType: 'color' | 'number';
+  gameType: "color" | "number";
   roundNumber: number;
-  status: 'upcoming' | 'open' | 'closed' | 'settled' | 'cancelled';
+  status: "upcoming" | "open" | "closed" | "settled" | "cancelled";
   startTime: string;
   endTime: string;
   result?: string | number;
@@ -21,7 +26,7 @@ export interface TradingOrder {
   round: TradingRound;
   selections: TradingSelection[];
   totalAmount: number;
-  status: 'pending' | 'won' | 'lost' | 'cancelled';
+  status: "pending" | "won" | "lost" | "cancelled";
   payout?: number;
   profit?: number;
   createdAt: string;
@@ -51,13 +56,13 @@ class TradingService {
    * Actual endpoint: GET /api/trading/rounds?gameType=color|number&status=...&limit=...
    */
   async getRounds(params?: {
-    gameType?: 'color' | 'number';
-    status?: 'upcoming' | 'open' | 'closed' | 'settled' | 'cancelled';
+    gameType?: "color" | "number";
+    status?: "upcoming" | "open" | "closed" | "settled" | "cancelled";
     limit?: number;
     page?: number;
   }): Promise<TradingRound[]> {
     const response = await apiCall<ApiResponse<{ rounds: TradingRound[] }>>(
-      apiClient.get('/trading/rounds', { params })
+      apiClient.get("/trading/rounds", { params })
     );
     return response.data!.rounds || [];
   }
@@ -82,11 +87,11 @@ class TradingService {
     selections: TradingSelection[];
   }): Promise<TradingOrder> {
     const response = await apiCall<ApiResponse<{ order: TradingOrder }>>(
-      apiClient.post('/trading/orders', data),
+      apiClient.post("/trading/orders", data),
       {
         showLoading: true,
         showSuccess: true,
-        successMessage: 'Order placed successfully!',
+        successMessage: "Order placed successfully!",
       }
     );
     return response.data!.order;
@@ -99,15 +104,15 @@ class TradingService {
   async getMyOrders(params?: {
     page?: number;
     limit?: number;
-    gameType?: 'color' | 'number';
-    status?: 'pending' | 'won' | 'lost' | 'cancelled';
+    gameType?: "color" | "number";
+    status?: "pending" | "won" | "lost" | "cancelled";
   }): Promise<PaginatedResponse<TradingOrder>> {
-    const response = await apiCall<ApiResponse<{
-      orders: TradingOrder[];
-      pagination: any;
-    }>>(
-      apiClient.get('/trading/my-orders', { params })
-    );
+    const response = await apiCall<
+      ApiResponse<{
+        orders: TradingOrder[];
+        pagination: any;
+      }>
+    >(apiClient.get("/trading/my-orders", { params }));
 
     return {
       items: response.data!.orders || [],
@@ -124,13 +129,19 @@ class TradingService {
       // Try to get stats from orders
       const orders = await this.getMyOrders({ limit: 100 });
       const allOrders = orders.items;
-      
+
       const totalOrders = allOrders.length;
-      const wonOrders = allOrders.filter(o => o.status === 'won').length;
-      const lostOrders = allOrders.filter(o => o.status === 'lost').length;
-      const totalInvested = allOrders.reduce((sum, o) => sum + o.totalAmount, 0);
-      const totalPayout = allOrders.reduce((sum, o) => sum + (o.payout || 0), 0);
-      
+      const wonOrders = allOrders.filter((o) => o.status === "won").length;
+      const lostOrders = allOrders.filter((o) => o.status === "lost").length;
+      const totalInvested = allOrders.reduce(
+        (sum, o) => sum + o.totalAmount,
+        0
+      );
+      const totalPayout = allOrders.reduce(
+        (sum, o) => sum + (o.payout || 0),
+        0
+      );
+
       return {
         totalOrders,
         wonOrders,
@@ -163,7 +174,7 @@ class TradingService {
       {
         showLoading: true,
         showSuccess: true,
-        successMessage: 'Order cancelled successfully!',
+        successMessage: "Order cancelled successfully!",
       }
     );
   }
@@ -171,24 +182,35 @@ class TradingService {
   /**
    * Get current active round for a game type
    */
-  async getCurrentRound(gameType: 'color' | 'number'): Promise<TradingRound | null> {
-    const rounds = await this.getRounds({ gameType, status: 'open', limit: 1 });
+  async getCurrentRound(
+    gameType: "color" | "number"
+  ): Promise<TradingRound | null> {
+    const rounds = await this.getRounds({ gameType, status: "open", limit: 1 });
     return rounds.length > 0 ? rounds[0] : null;
   }
 
   /**
    * Get upcoming round for a game type
    */
-  async getUpcomingRound(gameType: 'color' | 'number'): Promise<TradingRound | null> {
-    const rounds = await this.getRounds({ gameType, status: 'upcoming', limit: 1 });
+  async getUpcomingRound(
+    gameType: "color" | "number"
+  ): Promise<TradingRound | null> {
+    const rounds = await this.getRounds({
+      gameType,
+      status: "upcoming",
+      limit: 1,
+    });
     return rounds.length > 0 ? rounds[0] : null;
   }
 
   /**
    * Get recent results for a game type
    */
-  async getRecentResults(gameType: 'color' | 'number', limit: number = 10): Promise<TradingRound[]> {
-    return this.getRounds({ gameType, status: 'settled', limit });
+  async getRecentResults(
+    gameType: "color" | "number",
+    limit: number = 10
+  ): Promise<TradingRound[]> {
+    return this.getRounds({ gameType, status: "settled", limit });
   }
 
   /**
@@ -198,10 +220,10 @@ class TradingService {
     // Default odds (can be adjusted based on actual odds from backend)
     const colorOdds = { red: 2, green: 2, violet: 4.5 };
     const numberOdds = 9; // 1:9 payout for numbers
-    
+
     let totalPayout = 0;
-    selections.forEach(sel => {
-      if (typeof sel.option === 'string') {
+    selections.forEach((sel) => {
+      if (typeof sel.option === "string") {
         // Color game
         const odds = colorOdds[sel.option as keyof typeof colorOdds] || 2;
         totalPayout += sel.amount * odds;
@@ -210,7 +232,7 @@ class TradingService {
         totalPayout += sel.amount * numberOdds;
       }
     });
-    
+
     return totalPayout;
   }
 }

@@ -1,4 +1,9 @@
-import { apiClient, apiCall, ApiResponse, PaginatedResponse } from './apiClient';
+import {
+  apiClient,
+  apiCall,
+  ApiResponse,
+  PaginatedResponse,
+} from "./apiClient";
 
 // Types
 export interface InvestmentPlan {
@@ -11,10 +16,10 @@ export interface InvestmentPlan {
   totalReturn: number;
   features: string[];
   isActive: boolean;
-  category: 'basic' | 'standard' | 'premium' | 'vip';
+  category: "basic" | "standard" | "premium" | "vip";
   minInvestment?: number;
   maxInvestment?: number;
-  riskLevel: 'low' | 'medium' | 'high';
+  riskLevel: "low" | "medium" | "high";
   createdAt: string;
 }
 
@@ -26,7 +31,7 @@ export interface UserInvestment {
   amount: number;
   startDate: string;
   endDate: string;
-  status: 'active' | 'completed' | 'cancelled';
+  status: "active" | "completed" | "cancelled";
   totalEarned: number;
   lastPaidAt?: string;
   nextPaymentAt?: string;
@@ -49,11 +54,11 @@ class InvestmentService {
    * Get all available investment plans
    */
   async getPlans(params?: {
-    category?: 'basic' | 'standard' | 'premium' | 'vip';
+    category?: "basic" | "standard" | "premium" | "vip";
     isActive?: boolean;
   }): Promise<InvestmentPlan[]> {
     const response = await apiCall<ApiResponse<{ plans: InvestmentPlan[] }>>(
-      apiClient.get('/investment/plans', { params })
+      apiClient.get("/investment/plans", { params })
     );
     return response.data!.plans;
   }
@@ -64,9 +69,9 @@ class InvestmentService {
    */
   async getPlanById(planId: string): Promise<InvestmentPlan> {
     const plans = await this.getPlans();
-    const plan = plans.find(p => p.id === planId);
+    const plan = plans.find((p) => p.id === planId);
     if (!plan) {
-      throw new Error('Plan not found');
+      throw new Error("Plan not found");
     }
     return plan;
   }
@@ -80,11 +85,11 @@ class InvestmentService {
     amount: number;
   }): Promise<UserInvestment> {
     const response = await apiCall<ApiResponse<{ investment: UserInvestment }>>(
-      apiClient.post('/investment/purchase', data),
+      apiClient.post("/investment/purchase", data),
       {
         showLoading: true,
         showSuccess: true,
-        successMessage: 'Investment plan purchased successfully!',
+        successMessage: "Investment plan purchased successfully!",
       }
     );
     return response.data!.investment;
@@ -97,19 +102,23 @@ class InvestmentService {
   async getUserInvestments(params?: {
     page?: number;
     limit?: number;
-    status?: 'active' | 'completed' | 'cancelled';
+    status?: "active" | "completed" | "cancelled";
   }): Promise<PaginatedResponse<UserInvestment>> {
-    const response = await apiCall<ApiResponse<{
-      investment: UserInvestment;
-      pagination: any;
-    }>>(
-      apiClient.get('/investment/my-investment', { params })
-    );
+    const response = await apiCall<
+      ApiResponse<{
+        investment: UserInvestment;
+        pagination: any;
+      }>
+    >(apiClient.get("/investment/my-investment", { params }));
 
     // Backend returns single investment, wrap in array for consistency
     return {
       items: response.data!.investment ? [response.data!.investment] : [],
-      pagination: response.data!.pagination || { page: 1, limit: 1, total: response.data!.investment ? 1 : 0 },
+      pagination: response.data!.pagination || {
+        page: 1,
+        limit: 1,
+        total: response.data!.investment ? 1 : 0,
+      },
     };
   }
 
@@ -120,7 +129,7 @@ class InvestmentService {
   async getStats(): Promise<InvestmentStats> {
     try {
       const response = await apiCall<ApiResponse<InvestmentStats>>(
-        apiClient.get('/investment/my-investment')
+        apiClient.get("/investment/my-investment")
       );
       return response.data!;
     } catch {
@@ -142,11 +151,11 @@ class InvestmentService {
    */
   async claimDailyEarnings(): Promise<any> {
     const response = await apiCall<ApiResponse<any>>(
-      apiClient.post('/investment/claim-daily'),
+      apiClient.post("/investment/claim-daily"),
       {
         showLoading: true,
         showSuccess: true,
-        successMessage: 'Daily earnings claimed successfully!',
+        successMessage: "Daily earnings claimed successfully!",
       }
     );
     return response.data!;
@@ -158,7 +167,7 @@ class InvestmentService {
    */
   async getDailyStatus(): Promise<any> {
     const response = await apiCall<ApiResponse<any>>(
-      apiClient.get('/investment/daily-status')
+      apiClient.get("/investment/daily-status")
     );
     return response.data!;
   }
@@ -170,7 +179,9 @@ class InvestmentService {
   async cancelInvestment(_investmentId: string): Promise<void> {
     // TODO: Backend doesn't have cancel endpoint
     // May need admin intervention
-    throw new Error('Investment cancellation requires admin approval. Please contact support.');
+    throw new Error(
+      "Investment cancellation requires admin approval. Please contact support."
+    );
   }
 
   /**
@@ -184,12 +195,12 @@ class InvestmentService {
     page?: number;
     limit?: number;
   }): Promise<PaginatedResponse<any>> {
-    const response = await apiCall<ApiResponse<{
-      earnings: any[];
-      pagination: any;
-    }>>(
-      apiClient.get('/earnings/daily', { params })
-    );
+    const response = await apiCall<
+      ApiResponse<{
+        earnings: any[];
+        pagination: any;
+      }>
+    >(apiClient.get("/earnings/daily", { params }));
 
     return {
       items: response.data!.earnings || [],
@@ -203,7 +214,7 @@ class InvestmentService {
    */
   async getLevels(): Promise<any> {
     const response = await apiCall<ApiResponse<any>>(
-      apiClient.get('/investment/levels')
+      apiClient.get("/investment/levels")
     );
     return response.data!;
   }
@@ -211,7 +222,10 @@ class InvestmentService {
   /**
    * Calculate potential returns for a plan
    */
-  calculateReturns(plan: InvestmentPlan, amount: number): {
+  calculateReturns(
+    plan: InvestmentPlan,
+    amount: number
+  ): {
     daily: number;
     weekly: number;
     monthly: number;

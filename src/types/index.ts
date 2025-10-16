@@ -29,6 +29,8 @@ export interface SignUpData {
   password: string;
   firstName: string;
   lastName: string;
+  dateOfBirth: string;
+  phoneNumber: string;
   referralCode?: string;
 }
 

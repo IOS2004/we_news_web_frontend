@@ -1,4 +1,9 @@
-import { apiClient, apiCall, ApiResponse, PaginatedResponse } from './apiClient';
+import {
+  apiClient,
+  apiCall,
+  ApiResponse,
+  PaginatedResponse,
+} from "./apiClient";
 
 // Types
 export interface Wallet {
@@ -15,10 +20,10 @@ export interface Wallet {
 export interface Transaction {
   id: string;
   userId: string;
-  type: 'credit' | 'debit';
+  type: "credit" | "debit";
   amount: number;
   description: string;
-  status: 'pending' | 'completed' | 'failed' | 'cancelled';
+  status: "pending" | "completed" | "failed" | "cancelled";
   reference?: string;
   metadata?: Record<string, any>;
   createdAt: string;
@@ -28,7 +33,7 @@ export interface WithdrawalRequest {
   id: string;
   userId: string;
   amount: number;
-  status: 'pending' | 'approved' | 'rejected' | 'processing' | 'completed';
+  status: "pending" | "approved" | "rejected" | "processing" | "completed";
   paymentMethod: string;
   paymentDetails: {
     accountNumber?: string;
@@ -73,7 +78,7 @@ class WalletService {
    */
   async getBalance(): Promise<Wallet> {
     const response = await apiCall<ApiResponse<{ wallet: Wallet }>>(
-      apiClient.get('/wallet')
+      apiClient.get("/wallet")
     );
     return response.data!.wallet;
   }
@@ -84,17 +89,17 @@ class WalletService {
   async getTransactions(params?: {
     page?: number;
     limit?: number;
-    type?: 'credit' | 'debit';
-    status?: 'pending' | 'completed' | 'failed' | 'cancelled';
+    type?: "credit" | "debit";
+    status?: "pending" | "completed" | "failed" | "cancelled";
     startDate?: string;
     endDate?: string;
   }): Promise<PaginatedResponse<Transaction>> {
-    const response = await apiCall<ApiResponse<{
-      transactions: Transaction[];
-      pagination: any;
-    }>>(
-      apiClient.get('/wallet/transactions', { params })
-    );
+    const response = await apiCall<
+      ApiResponse<{
+        transactions: Transaction[];
+        pagination: any;
+      }>
+    >(apiClient.get("/wallet/transactions", { params }));
 
     return {
       items: response.data!.transactions,
@@ -110,7 +115,7 @@ class WalletService {
    */
   async requestWithdrawal(data: {
     amount: number;
-    paymentMethod: 'bank_transfer' | 'upi';
+    paymentMethod: "bank_transfer" | "upi";
     paymentDetails: {
       accountNumber?: string;
       ifscCode?: string;
@@ -120,16 +125,18 @@ class WalletService {
   }): Promise<WithdrawalRequest> {
     // TODO: Backend needs to implement proper withdrawal endpoint
     // For now, this can be handled through admin panel
-    const response = await apiCall<ApiResponse<{ withdrawal: WithdrawalRequest }>>(
-      apiClient.post('/wallet/refund', { 
+    const response = await apiCall<
+      ApiResponse<{ withdrawal: WithdrawalRequest }>
+    >(
+      apiClient.post("/wallet/refund", {
         amount: data.amount,
-        reason: 'Withdrawal request',
-        paymentDetails: data.paymentDetails 
+        reason: "Withdrawal request",
+        paymentDetails: data.paymentDetails,
       }),
       {
         showLoading: true,
         showSuccess: true,
-        successMessage: 'Withdrawal request submitted successfully!',
+        successMessage: "Withdrawal request submitted successfully!",
       }
     );
     return response.data!.withdrawal;
@@ -142,14 +149,18 @@ class WalletService {
   async getWithdrawals(params?: {
     page?: number;
     limit?: number;
-    status?: 'pending' | 'approved' | 'rejected' | 'processing' | 'completed';
+    status?: "pending" | "approved" | "rejected" | "processing" | "completed";
   }): Promise<PaginatedResponse<WithdrawalRequest>> {
     // TODO: Confirm actual endpoint - may be /admin/withdrawals or /earnings/withdrawals
-    const response = await apiCall<ApiResponse<{
-      withdrawals: WithdrawalRequest[];
-      pagination: any;
-    }>>(
-      apiClient.get('/wallet/transactions', { params: { ...params, type: 'debit' } })
+    const response = await apiCall<
+      ApiResponse<{
+        withdrawals: WithdrawalRequest[];
+        pagination: any;
+      }>
+    >(
+      apiClient.get("/wallet/transactions", {
+        params: { ...params, type: "debit" },
+      })
     );
 
     return {
@@ -164,7 +175,7 @@ class WalletService {
    */
   async getStats(): Promise<WalletStats> {
     const response = await apiCall<ApiResponse<WalletStats>>(
-      apiClient.get('/earnings/stats')
+      apiClient.get("/earnings/stats")
     );
     return response.data!;
   }
@@ -175,11 +186,13 @@ class WalletService {
    */
   async getEarnings(): Promise<EarningsBreakdown> {
     const response = await apiCall<ApiResponse<EarningsBreakdown>>(
-      apiClient.get('/earnings/summary', { 
-        params: { 
-          startDate: new Date(Date.now() - 30*24*60*60*1000).toISOString(),
-          endDate: new Date().toISOString()
-        }
+      apiClient.get("/earnings/summary", {
+        params: {
+          startDate: new Date(
+            Date.now() - 30 * 24 * 60 * 60 * 1000
+          ).toISOString(),
+          endDate: new Date().toISOString(),
+        },
       })
     );
     return response.data!;
@@ -189,16 +202,13 @@ class WalletService {
    * Initiate wallet top-up
    * Actual endpoint: POST /api/wallet/topup
    */
-  async topUp(data: {
-    amount: number;
-    paymentMethod: string;
-  }): Promise<any> {
+  async topUp(data: { amount: number; paymentMethod: string }): Promise<any> {
     const response = await apiCall<ApiResponse<any>>(
-      apiClient.post('/wallet/topup', data),
+      apiClient.post("/wallet/topup", data),
       {
         showLoading: true,
         showSuccess: true,
-        successMessage: 'Top-up initiated successfully!',
+        successMessage: "Top-up initiated successfully!",
       }
     );
     return response.data!;
@@ -214,11 +224,11 @@ class WalletService {
     description?: string;
   }): Promise<any> {
     const response = await apiCall<ApiResponse<any>>(
-      apiClient.post('/wallet/pay', data),
+      apiClient.post("/wallet/pay", data),
       {
         showLoading: true,
         showSuccess: true,
-        successMessage: 'Payment processed successfully!',
+        successMessage: "Payment processed successfully!",
       }
     );
     return response.data!;
@@ -229,9 +239,9 @@ class WalletService {
    * Actual endpoint: GET /api/wallet/can-pay
    */
   async canPay(amount: number): Promise<{ canPay: boolean; balance: number }> {
-    const response = await apiCall<ApiResponse<{ canPay: boolean; balance: number }>>(
-      apiClient.get('/wallet/can-pay', { params: { amount } })
-    );
+    const response = await apiCall<
+      ApiResponse<{ canPay: boolean; balance: number }>
+    >(apiClient.get("/wallet/can-pay", { params: { amount } }));
     return response.data!;
   }
 }

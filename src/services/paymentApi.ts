@@ -1,4 +1,4 @@
-import { apiCall } from './apiClient';
+import { apiCall } from "./apiClient";
 
 // ============================================
 // TYPES
@@ -57,7 +57,7 @@ export interface PaymentTransaction {
   transactionId: string;
   orderId: string;
   amount: number;
-  status: 'pending' | 'success' | 'failed' | 'cancelled';
+  status: "pending" | "success" | "failed" | "cancelled";
   paymentMethod: string;
   createdAt: string;
   updatedAt: string;
@@ -78,40 +78,48 @@ export interface PaymentHistory {
 /**
  * Initiate wallet topup
  */
-export const initiateTopup = async (request: TopupRequest): Promise<TopupResponse> => {
-  const { default: apiClient } = await import('./apiClient');
-  return apiCall<TopupResponse>(
-    apiClient.post('/wallet/topup', request),
-    { showLoading: true }
-  );
+export const initiateTopup = async (
+  request: TopupRequest
+): Promise<TopupResponse> => {
+  const { default: apiClient } = await import("./apiClient");
+  return apiCall<TopupResponse>(apiClient.post("/wallet/topup", request), {
+    showLoading: true,
+  });
 };
 
 /**
  * Handle topup success callback
  */
-export const handleTopupSuccess = async (request: TopupSuccessRequest): Promise<{ success: boolean; message: string }> => {
-  const { default: apiClient } = await import('./apiClient');
+export const handleTopupSuccess = async (
+  request: TopupSuccessRequest
+): Promise<{ success: boolean; message: string }> => {
+  const { default: apiClient } = await import("./apiClient");
   return apiCall<{ success: boolean; message: string }>(
-    apiClient.post('/wallet/topup/success', request),
-    { showSuccess: true, successMessage: 'Payment verified successfully!' }
+    apiClient.post("/wallet/topup/success", request),
+    { showSuccess: true, successMessage: "Payment verified successfully!" }
   );
 };
 
 /**
  * Handle topup failure callback
  */
-export const handleTopupFailure = async (request: TopupFailureRequest): Promise<{ success: boolean; message: string }> => {
-  const { default: apiClient } = await import('./apiClient');
+export const handleTopupFailure = async (
+  request: TopupFailureRequest
+): Promise<{ success: boolean; message: string }> => {
+  const { default: apiClient } = await import("./apiClient");
   return apiCall<{ success: boolean; message: string }>(
-    apiClient.post('/wallet/topup/failure', request)
+    apiClient.post("/wallet/topup/failure", request)
   );
 };
 
 /**
  * Get payment history
  */
-export const getPaymentHistory = async (page = 1, limit = 20): Promise<PaymentHistory> => {
-  const { default: apiClient } = await import('./apiClient');
+export const getPaymentHistory = async (
+  page = 1,
+  limit = 20
+): Promise<PaymentHistory> => {
+  const { default: apiClient } = await import("./apiClient");
   return apiCall<PaymentHistory>(
     apiClient.get(`/wallet/payments?page=${page}&limit=${limit}`)
   );
@@ -120,8 +128,10 @@ export const getPaymentHistory = async (page = 1, limit = 20): Promise<PaymentHi
 /**
  * Get payment transaction details
  */
-export const getTransactionDetails = async (transactionId: string): Promise<PaymentTransaction> => {
-  const { default: apiClient } = await import('./apiClient');
+export const getTransactionDetails = async (
+  transactionId: string
+): Promise<PaymentTransaction> => {
+  const { default: apiClient } = await import("./apiClient");
   return apiCall<PaymentTransaction>(
     apiClient.get(`/wallet/payments/${transactionId}`)
   );
@@ -130,22 +140,26 @@ export const getTransactionDetails = async (transactionId: string): Promise<Paym
 /**
  * Cancel pending payment
  */
-export const cancelPayment = async (transactionId: string): Promise<{ success: boolean; message: string }> => {
-  const { default: apiClient } = await import('./apiClient');
+export const cancelPayment = async (
+  transactionId: string
+): Promise<{ success: boolean; message: string }> => {
+  const { default: apiClient } = await import("./apiClient");
   return apiCall<{ success: boolean; message: string }>(
     apiClient.post(`/wallet/payments/${transactionId}/cancel`),
-    { showSuccess: true, successMessage: 'Payment cancelled' }
+    { showSuccess: true, successMessage: "Payment cancelled" }
   );
 };
 
 /**
  * Test topup success (for testing purposes)
  */
-export const testTopupSuccess = async (transactionId: string): Promise<{ success: boolean; message: string }> => {
-  const { default: apiClient } = await import('./apiClient');
+export const testTopupSuccess = async (
+  transactionId: string
+): Promise<{ success: boolean; message: string }> => {
+  const { default: apiClient } = await import("./apiClient");
   return apiCall<{ success: boolean; message: string }>(
     apiClient.post(`/wallet/topup/test/${transactionId}`),
-    { showSuccess: true, successMessage: 'Test payment successful!' }
+    { showSuccess: true, successMessage: "Test payment successful!" }
   );
 };
 
@@ -163,14 +177,14 @@ export const loadCashfreeSDK = (): Promise<any> => {
       return;
     }
 
-    const script = document.createElement('script');
-    script.src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
+    const script = document.createElement("script");
+    script.src = "https://sdk.cashfree.com/js/v3/cashfree.js";
     script.async = true;
     script.onload = () => {
       resolve((window as any).Cashfree);
     };
     script.onerror = () => {
-      reject(new Error('Failed to load Cashfree SDK'));
+      reject(new Error("Failed to load Cashfree SDK"));
     };
     document.head.appendChild(script);
   });
@@ -181,18 +195,18 @@ export const loadCashfreeSDK = (): Promise<any> => {
  */
 export const initializeCashfreePayment = async (
   _paymentSessionId: string,
-  environment: 'sandbox' | 'production' = 'production'
+  environment: "sandbox" | "production" = "production"
 ): Promise<any> => {
   try {
     const Cashfree = await loadCashfreeSDK();
-    
+
     const cashfree = Cashfree({
       mode: environment,
     });
 
     return cashfree;
   } catch (error) {
-    console.error('Cashfree initialization error:', error);
+    console.error("Cashfree initialization error:", error);
     throw error;
   }
 };
@@ -217,23 +231,26 @@ export const processCashfreePayment = async (
       returnUrl: `${window.location.origin}/wallet?payment=success&txnId=${transactionId}`,
     };
 
-    cashfree.checkout(checkoutOptions).then((result: any) => {
-      if (result.error) {
-        console.error('Payment error:', result.error);
-        callbacks.onError?.(result.error);
-        return;
-      }
+    cashfree
+      .checkout(checkoutOptions)
+      .then((result: any) => {
+        if (result.error) {
+          console.error("Payment error:", result.error);
+          callbacks.onError?.(result.error);
+          return;
+        }
 
-      if (result.paymentDetails) {
-        console.log('Payment successful:', result.paymentDetails);
-        callbacks.onSuccess?.(result.paymentDetails);
-      }
-    }).catch((error: any) => {
-      console.error('Payment processing error:', error);
-      callbacks.onFailure?.(error);
-    });
+        if (result.paymentDetails) {
+          console.log("Payment successful:", result.paymentDetails);
+          callbacks.onSuccess?.(result.paymentDetails);
+        }
+      })
+      .catch((error: any) => {
+        console.error("Payment processing error:", error);
+        callbacks.onFailure?.(error);
+      });
   } catch (error) {
-    console.error('Cashfree payment error:', error);
+    console.error("Cashfree payment error:", error);
     callbacks.onError?.(error);
   }
 };

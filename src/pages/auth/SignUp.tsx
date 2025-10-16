@@ -15,6 +15,8 @@ export default function SignUp() {
     password: '',
     firstName: '',
     lastName: '',
+    dateOfBirth: '',
+    phoneNumber: '',
     referralCode: '',
   });
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -31,6 +33,14 @@ export default function SignUp() {
       newErrors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Email is invalid';
+    }
+    if (!formData.dateOfBirth) {
+      newErrors.dateOfBirth = 'Date of birth is required';
+    }
+    if (!formData.phoneNumber) {
+      newErrors.phoneNumber = 'Phone number is required';
+    } else if (!/^[0-9]{10}$/.test(formData.phoneNumber)) {
+      newErrors.phoneNumber = 'Phone number must be 10 digits';
     }
     if (!formData.password) {
       newErrors.password = 'Password is required';
@@ -110,6 +120,29 @@ export default function SignUp() {
           value={formData.email}
           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
           error={errors.email}
+          required
+          fullWidth
+        />
+        
+        <Input
+          label="Date of Birth"
+          type="date"
+          placeholder="Select your date of birth"
+          value={formData.dateOfBirth}
+          onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+          error={errors.dateOfBirth}
+          required
+          fullWidth
+        />
+        
+        <Input
+          label="Phone Number"
+          type="tel"
+          placeholder="Enter 10 digit phone number"
+          value={formData.phoneNumber}
+          onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+          error={errors.phoneNumber}
+          helperText="10 digit mobile number"
           required
           fullWidth
         />
