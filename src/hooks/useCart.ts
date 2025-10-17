@@ -49,7 +49,7 @@ const createCartObject = (items: CartItem[]): Cart => {
   const totalAmount = calculateTotalAmount(items);
   const serviceCharge = calculateServiceCharge(totalAmount);
   const finalAmount = calculateFinalAmount(totalAmount);
-  
+
   return {
     items,
     totalAmount,
