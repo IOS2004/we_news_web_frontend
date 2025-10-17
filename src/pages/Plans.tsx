@@ -3,7 +3,24 @@ import { useWallet } from '@/contexts/WalletContext';
 import Card from '@/components/common/Card';
 import { formatCurrency } from '@/utils/helpers';
 import toast from 'react-hot-toast';
+import { apiClient } from '@/services/apiClient';
 
+// Backend Plan Structure
+interface BackendInvestmentPlan {
+  id: string;
+  name: string;
+  joiningAmount: number;
+  levels: number;
+  validity: number;
+  dailyReturn: number;
+  weeklyReturn: number;
+  monthlyReturn: number;
+  isActive: boolean;
+  createdAt?: any;
+  updatedAt?: any;
+}
+
+// Frontend Growth Plan Structure
 interface GrowthPlan {
   id: string;
   name: string;
@@ -25,101 +42,128 @@ interface GrowthPlan {
   popular: boolean;
 }
 
-// Mock growth plans data
-const mockGrowthPlans: GrowthPlan[] = [
-  {
-    id: 'base_plan',
-    name: 'Base Plan',
-    description: 'Perfect for beginners starting their investment journey',
-    plans: {
-      daily: { initialPayment: 5000, contributionAmount: 50 },
-      weekly: { initialPayment: 5000, contributionAmount: 350 },
-      monthly: { initialPayment: 5000, contributionAmount: 1500 }
-    },
-    planValidity: 365,
-    earnings: {
-      daily: 75,
-      weekly: 525,
-      monthly: 2250
-    },
-    features: [
-      '365 days validity',
-      'Flexible contribution frequency',
-      'Growth tracking included',
-      'Daily earnings updates',
-      'Withdrawal anytime'
-    ],
-    color: '#3B82F6',
-    gradient: ['#3B82F6', '#2563EB'],
-    popular: false
-  },
-  {
-    id: 'silver_plan',
-    name: 'Silver Plan',
-    description: 'Enhanced returns for consistent investors',
-    plans: {
-      daily: { initialPayment: 10000, contributionAmount: 100 },
-      weekly: { initialPayment: 10000, contributionAmount: 700 },
-      monthly: { initialPayment: 10000, contributionAmount: 3000 }
-    },
-    planValidity: 365,
-    earnings: {
-      daily: 150,
-      weekly: 1050,
-      monthly: 4500
-    },
-    features: [
-      '365 days validity',
-      'Higher daily earnings',
-      'Priority support',
-      'Bonus on milestones',
-      'Referral rewards',
-      'Monthly reports'
-    ],
-    color: '#6B7280',
-    gradient: ['#6B7280', '#4B5563'],
-    popular: true
-  },
-  {
-    id: 'gold_plan',
-    name: 'Gold Plan',
-    description: 'Premium plan with maximum growth potential',
-    plans: {
-      daily: { initialPayment: 25000, contributionAmount: 250 },
-      weekly: { initialPayment: 25000, contributionAmount: 1750 },
-      monthly: { initialPayment: 25000, contributionAmount: 7500 }
-    },
-    planValidity: 365,
-    earnings: {
-      daily: 400,
-      weekly: 2800,
-      monthly: 12000
-    },
-    features: [
-      '365 days validity',
-      'Maximum daily earnings',
-      'VIP support 24/7',
-      'Exclusive bonuses',
-      'Advanced analytics',
-      'Personal account manager',
-      'Early access to features'
-    ],
-    color: '#F59E0B',
-    gradient: ['#F59E0B', '#D97706'],
-    popular: false
-  }
-];
+// Utility function to map backend plans to frontend structure
+const mapBackendPlansToGrowthPlans = (backendPlans: BackendInvestmentPlan[]): GrowthPlan[] => {
+  const planColorMapping: { [key: string]: { color: string; gradient: [string, string] } } = {
+    bass: { color: '#3B82F6', gradient: ['#3B82F6', '#2563EB'] },
+    base: { color: '#3B82F6', gradient: ['#3B82F6', '#2563EB'] },
+    silver: { color: '#9CA3AF', gradient: ['#9CA3AF', '#6B7280'] },
+    gold: { color: '#F59E0B', gradient: ['#F59E0B', '#D97706'] },
+    diamond: { color: '#8B5CF6', gradient: ['#8B5CF6', '#7C3AED'] },
+    platinum: { color: '#10B981', gradient: ['#10B981', '#059669'] },
+    elite: { color: '#DC2626', gradient: ['#DC2626', '#B91C1C'] },
+    eight: { color: '#DC2626', gradient: ['#DC2626', '#B91C1C'] },
+  };
+
+  const getDescription = (name: string): string => {
+    const descriptions: { [key: string]: string } = {
+      bass: 'Start your growth journey',
+      base: 'Perfect for beginners',
+      silver: 'Enhanced growth opportunities',
+      gold: 'Premium growth experience',
+      diamond: 'Elite growth tier',
+      platinum: 'Ultimate growth package',
+      elite: 'The pinnacle of growth',
+      eight: 'The pinnacle of growth',
+    };
+    return descriptions[name.toLowerCase()] || 'Accelerate your financial growth';
+  };
+
+  const getFeatures = (name: string): string[] => {
+    const baseFeatures = [
+      'Daily contribution tracking',
+      'Growth rewards system',
+      'Portfolio analytics',
+      'Performance insights',
+    ];
+
+    const features: { [key: string]: string[] } = {
+      bass: baseFeatures,
+      base: baseFeatures,
+      silver: ['Higher growth rewards', 'Priority support', 'Advanced analytics', 'Referral bonuses'],
+      gold: ['Premium growth rates', 'Exclusive insights', 'Personal account manager', 'VIP support'],
+      diamond: ['Maximum earning potential', 'Elite customer support', 'Early access', 'Premium features'],
+      platinum: ['Highest growth rewards', 'Dedicated manager', 'Exclusive opportunities', 'Elite status'],
+      elite: ['Maximum daily contributions', 'Elite benefits', 'Personalized strategy', 'Top-tier rewards'],
+      eight: ['Maximum daily contributions', 'Elite benefits', 'Personalized strategy', 'Top-tier rewards'],
+    };
+
+    return features[name.toLowerCase()] || baseFeatures;
+  };
+
+  return backendPlans.map((backendPlan, index) => {
+    const planKey = backendPlan.name.toLowerCase();
+    const colorData = planColorMapping[planKey] || { color: '#3B82F6', gradient: ['#3B82F6', '#2563EB'] as [string, string] };
+
+    const dailyContribution = backendPlan.dailyReturn;
+    const weeklyContribution = backendPlan.weeklyReturn;
+    const monthlyContribution = backendPlan.monthlyReturn;
+    const baseInitialPayment = backendPlan.joiningAmount;
+
+    return {
+      id: backendPlan.id,
+      name: `${backendPlan.name.charAt(0).toUpperCase() + backendPlan.name.slice(1)} Plan`,
+      description: getDescription(backendPlan.name),
+      plans: {
+        daily: {
+          initialPayment: baseInitialPayment,
+          contributionAmount: dailyContribution,
+        },
+        weekly: {
+          initialPayment: Math.round(baseInitialPayment * 0.85),
+          contributionAmount: weeklyContribution,
+        },
+        monthly: {
+          initialPayment: Math.round(baseInitialPayment * 0.7),
+          contributionAmount: monthlyContribution,
+        },
+      },
+      planValidity: backendPlan.validity,
+      earnings: {
+        daily: Math.round(dailyContribution * 1.5),
+        weekly: Math.round(weeklyContribution * 1.5),
+        monthly: Math.round(monthlyContribution * 1.5),
+      },
+      features: getFeatures(backendPlan.name),
+      color: colorData.color,
+      gradient: colorData.gradient,
+      popular: index === 1, // Make second plan popular
+    };
+  });
+};
 
 export default function Plans() {
   const { wallet, refreshWallet } = useWallet();
   const [selectedFrequency, setSelectedFrequency] = useState<'daily' | 'weekly' | 'monthly'>('daily');
-  const [growthPlans] = useState<GrowthPlan[]>(mockGrowthPlans);
+  const [growthPlans, setGrowthPlans] = useState<GrowthPlan[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isPurchasing, setIsPurchasing] = useState<string | null>(null);
 
   useEffect(() => {
-    document.title = 'Investment Plans - WeNews';
+    document.title = 'Return Plans - WeNews';
+    loadPlans();
     refreshWallet();
   }, []);
+
+  const loadPlans = async () => {
+    try {
+      setLoading(true);
+      // Fetch plans from backend using apiClient (same as React Native app)
+      const response = await apiClient.get('/investment/plans');
+      
+      if (response.data.success && response.data.data) {
+        const mappedPlans = mapBackendPlansToGrowthPlans(response.data.data);
+        setGrowthPlans(mappedPlans);
+      } else {
+        toast.error('Failed to load plans');
+      }
+    } catch (error: any) {
+      console.error('Error loading plans:', error);
+      toast.error(error.response?.data?.message || 'Failed to load plans. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handlePurchasePlan = async (plan: GrowthPlan) => {
     const currentPlan = plan.plans[selectedFrequency];
@@ -140,26 +184,47 @@ export default function Plans() {
     toast.loading('Processing purchase...', { id: 'purchase' });
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      toast.success(
-        `${plan.name} activated successfully! Amount deducted: ${formatCurrency(planAmount)}`,
-        { id: 'purchase', duration: 5000 }
-      );
-      
-      refreshWallet();
-    } catch (error) {
-      toast.error('Failed to purchase plan. Please try again.', { id: 'purchase' });
+      // Call backend API to purchase plan using apiClient (same as React Native app)
+      const response = await apiClient.post('/investment/purchase', {
+        planId: plan.id,
+        frequency: selectedFrequency,
+      });
+
+      if (response.data.success) {
+        toast.success(
+          `${plan.name} activated successfully! Amount deducted: ${formatCurrency(planAmount)}`,
+          { id: 'purchase', duration: 5000 }
+        );
+        refreshWallet();
+      } else {
+        toast.error(response.data.message || 'Failed to purchase plan', { id: 'purchase' });
+      }
+    } catch (error: any) {
+      console.error('Purchase error:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to purchase plan. Please try again.';
+      toast.error(errorMessage, { id: 'purchase' });
     } finally {
       setIsPurchasing(null);
     }
   };
 
+  if (loading) {
+    return (
+      <div className="p-6 max-w-7xl mx-auto">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading plans...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground mb-2">Investment Plans</h1>
+        <h1 className="text-3xl font-bold text-foreground mb-2">Return Plans</h1>
         <p className="text-muted-foreground">
           Accelerate your financial growth with our flexible contribution plans designed for consistent returns.
         </p>
@@ -210,9 +275,21 @@ export default function Plans() {
         </button>
       </div>
 
+      {/* Empty State */}
+      {growthPlans.length === 0 && (
+        <Card className="p-12 text-center">
+          <div className="text-6xl mb-4">📊</div>
+          <h3 className="text-xl font-semibold mb-2">No Plans Available</h3>
+          <p className="text-muted-foreground">
+            Investment plans will appear here once they are available.
+          </p>
+        </Card>
+      )}
+
       {/* Plans Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        {growthPlans.map((plan) => {
+      {growthPlans.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          {growthPlans.map((plan) => {
           const currentPlan = plan.plans[selectedFrequency];
           
           return (
@@ -271,22 +348,22 @@ export default function Plans() {
                   {/* Growth Potential */}
                   <div>
                     <h4 className="font-semibold mb-3">Growth Potential</h4>
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-3 gap-2">
                       <div className="text-center p-3 bg-green-50 rounded-lg">
-                        <div className="text-xl font-bold text-green-600">
-                          {formatCurrency(plan.earnings.daily)}
+                        <div className="text-lg font-bold text-green-600 leading-tight">
+                          ₹{plan.earnings.daily.toLocaleString('en-IN')}
                         </div>
                         <div className="text-xs text-muted-foreground mt-1">Daily</div>
                       </div>
                       <div className="text-center p-3 bg-blue-50 rounded-lg">
-                        <div className="text-xl font-bold text-blue-600">
-                          {formatCurrency(plan.earnings.weekly)}
+                        <div className="text-lg font-bold text-blue-600 leading-tight">
+                          ₹{plan.earnings.weekly.toLocaleString('en-IN')}
                         </div>
                         <div className="text-xs text-muted-foreground mt-1">Weekly</div>
                       </div>
                       <div className="text-center p-3 bg-purple-50 rounded-lg">
-                        <div className="text-xl font-bold text-purple-600">
-                          {formatCurrency(plan.earnings.monthly)}
+                        <div className="text-lg font-bold text-purple-600 leading-tight">
+                          ₹{plan.earnings.monthly.toLocaleString('en-IN')}
                         </div>
                         <div className="text-xs text-muted-foreground mt-1">Monthly</div>
                       </div>
@@ -332,7 +409,8 @@ export default function Plans() {
             </div>
           );
         })}
-      </div>
+        </div>
+      )}
 
       {/* Info Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

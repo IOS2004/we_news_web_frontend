@@ -1,14 +1,17 @@
 # Network Multi-Plan Architecture Fix
 
 ## Overview
+
 Fixed the Network page and Profile page to properly support the multi-plan architecture where each investment plan has its own independent network and referral system.
 
 ## Issues Fixed
 
 ### 1. Profile Page - Removed Duplicate Navigation
+
 **Problem**: Profile page had redundant navigation buttons that were already available in the sidebar (Wallet, Plans, Withdrawals, Network, etc.)
 
 **Solution**: Cleaned up Profile page to only show:
+
 - Account settings (Edit Profile, Settings, Help & Support)
 - Achievements (Labels, Badges, Community Benefits)
 - Logout button
@@ -16,18 +19,22 @@ Fixed the Network page and Profile page to properly support the multi-plan archi
 **Files Changed**: `web-frontend/src/pages/Profile.tsx`
 
 ### 2. Network Page - Plan-Specific Architecture
+
 **Problem**: Network page was showing mock/static data and not respecting that each plan has its own separate network.
 
 **Solution**: Complete rewrite to support plan-specific networks:
 
 #### Key Changes:
+
 1. **Plan Selection**
+
    - Added URL query parameter support: `/network?planId=123`
    - Loads user's active investment plans
    - Shows plan selector dropdown when user has multiple plans
    - Auto-selects first active plan or plan from URL
 
 2. **Plan-Specific Data**
+
    - Each plan shows its own network statistics:
      - Total Network Size (from `investment.totalReferrals`)
      - Direct Referrals (from `investment.directReferrals`)
@@ -37,6 +44,7 @@ Fixed the Network page and Profile page to properly support the multi-plan archi
    - Shows plan status badge
 
 3. **Empty States**
+
    - Loading state with spinner
    - No plans state: "Subscribe to a plan to start building your network"
    - API integration notice for level details
@@ -49,11 +57,13 @@ Fixed the Network page and Profile page to properly support the multi-plan archi
 **Files Changed**: `web-frontend/src/pages/Network.tsx`
 
 ### 3. Dashboard Network Card - Smart Navigation
+
 **Problem**: "View Network" button navigated to Network page without specifying which plan.
 
 **Solution**: Updated button to pass the first active plan's ID in URL:
+
 ```typescript
-navigate(planId ? `/network?planId=${planId}` : '/network')
+navigate(planId ? `/network?planId=${planId}` : "/network");
 ```
 
 **Files Changed**: `web-frontend/src/pages/Dashboard.tsx`
@@ -61,6 +71,7 @@ navigate(planId ? `/network?planId=${planId}` : '/network')
 ## Architecture Understanding
 
 ### Multi-Plan Network Structure
+
 ```
 User
 ├── Plan 1 (Base Plan)
@@ -85,7 +96,9 @@ User
 **Key Principle**: Each investment plan operates as a completely independent MLM/referral system. A user can have multiple plans, and each plan tracks its own network tree, referrals, and earnings separately.
 
 ### Dashboard Network Card Logic
+
 Shows **aggregated data** from all plans:
+
 - Total Network = Sum of all plans' `totalReferrals`
 - Total Earnings = Sum of all plans' `referralEarnings`
 - Active Members = Sum of all plans' `activeReferrals`
@@ -93,7 +106,9 @@ Shows **aggregated data** from all plans:
 This gives users an overview of their entire referral business across all investments.
 
 ### Network Page Logic
+
 Shows **plan-specific data** for selected plan:
+
 - User can switch between plans using dropdown
 - Each plan shows only its own network members and levels
 - Referral link is global (user's referral code) but converts to plan-specific referral based on backend logic
@@ -101,12 +116,15 @@ Shows **plan-specific data** for selected plan:
 ## Backend API Requirements
 
 ### Current Implementation
+
 Uses existing investment data from:
+
 ```typescript
-GET /api/investment/my-investments
+GET / api / investment / my - investments;
 ```
 
 Returns:
+
 ```typescript
 {
   id: string;
@@ -120,7 +138,9 @@ Returns:
 ```
 
 ### Future API Needed
+
 For level-wise network breakdown:
+
 ```typescript
 GET /api/investment/:investmentId/network
 
@@ -159,11 +179,13 @@ Response:
 ## User Experience
 
 ### When User Opens Network Page
+
 1. **No Plans**: Shows empty state with "View Available Plans" button
 2. **Single Plan**: Shows that plan's network automatically
 3. **Multiple Plans**: Shows first plan with dropdown to switch between plans
 
 ### Navigation Flow
+
 ```
 Dashboard → View Full Network → Network Page (with first plan selected)
 Plan Details → View Network → Network Page (with that specific plan selected)
@@ -171,6 +193,7 @@ Sidebar → Network → Network Page (with first plan selected)
 ```
 
 ### URL Structure
+
 - `/network` - Shows first active plan or empty state
 - `/network?planId=abc123` - Shows specific plan's network
 
@@ -192,11 +215,13 @@ Sidebar → Network → Network Page (with first plan selected)
 ## Next Steps
 
 1. **Backend Integration**
+
    - Create `/api/investment/:id/network` endpoint
    - Return level-wise network structure for specific plan
    - Include member details for each level
 
 2. **Enhanced Features**
+
    - Network tree visualization per plan
    - Member search and filtering
    - Network growth analytics
