@@ -26,15 +26,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
       const userData = localStorage.getItem(STORAGE_KEYS.USER_DATA);
 
+      console.log('🔐 Auth Init - Token exists:', !!token);
+      console.log('🔐 Auth Init - User data exists:', !!userData);
+
       if (token && userData) {
         try {
-          // Verify token is still valid by fetching current user
-          const currentUser = await authService.getCurrentUser();
-          setUser(currentUser);
+          // Parse and set user from localStorage immediately for faster UI
+          const cachedUser = JSON.parse(userData);
+          console.log('👤 Cached user loaded:', cachedUser);
+          console.log('👤 User name:', cachedUser.firstName, cachedUser.lastName);
+          setUser(cachedUser);
+          
+          // Then verify token is still valid by fetching current user
+          try {
+            const currentUser = await authService.getCurrentUser();
+            console.log('✅ Token verified, fresh user data:', currentUser);
+            console.log('✅ Fresh user name:', currentUser.firstName, currentUser.lastName);
+            setUser(currentUser);
+          } catch (verifyError) {
+            // If verification fails but we have cached data, keep using it
+            console.log('⚠️ Token verification failed, using cached user data:', verifyError);
+          }
         } catch (error) {
-          // Token invalid, clear storage
+          // Token invalid or corrupted data, clear storage
+          console.log('❌ Auth initialization failed, clearing session:', error);
           localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
           localStorage.removeItem(STORAGE_KEYS.USER_DATA);
+          setUser(null);
         }
       }
       

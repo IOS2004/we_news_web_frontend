@@ -1,4 +1,5 @@
 import { apiClient, apiCall, ApiResponse } from "./apiClient";
+import { STORAGE_KEYS } from "@/config";
 
 // Types
 export interface User {
@@ -59,8 +60,8 @@ class AuthService {
 
     // Store token and user in localStorage
     const { token, user } = response.data!;
-    localStorage.setItem("token", token);
-    localStorage.setItem("user", JSON.stringify(user));
+    localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, token);
+    localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(user));
 
     return response.data!;
   }
@@ -80,8 +81,8 @@ class AuthService {
 
     // Store token and user in localStorage
     const { token, user } = response.data!;
-    localStorage.setItem("token", token);
-    localStorage.setItem("user", JSON.stringify(user));
+    localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, token);
+    localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(user));
 
     return response.data!;
   }
@@ -90,8 +91,8 @@ class AuthService {
    * Logout user
    */
   logout(): void {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
+    localStorage.removeItem(STORAGE_KEYS.USER_DATA);
     window.location.href = "/login";
   }
 
@@ -114,7 +115,7 @@ class AuthService {
     );
 
     const { token } = response.data!;
-    localStorage.setItem("token", token);
+    localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, token);
 
     return token;
   }
@@ -137,7 +138,7 @@ class AuthService {
    * Check if user is authenticated
    */
   isAuthenticated(): boolean {
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
     return !!token;
   }
 
@@ -145,7 +146,7 @@ class AuthService {
    * Get stored user from localStorage
    */
   getStoredUser(): User | null {
-    const userStr = localStorage.getItem("user");
+    const userStr = localStorage.getItem(STORAGE_KEYS.USER_DATA);
     if (!userStr) return null;
 
     try {
@@ -159,7 +160,7 @@ class AuthService {
    * Get stored token from localStorage
    */
   getStoredToken(): string | null {
-    return localStorage.getItem("token");
+    return localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
   }
 }
 

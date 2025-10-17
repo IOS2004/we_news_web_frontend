@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useWallet } from '@/contexts/WalletContext';
 import Card from '@/components/common/Card';
@@ -71,15 +71,8 @@ export default function Trading() {
   const [bets, setBets] = useState<Bet[]>([]);
   const [gameHistory, setGameHistory] = useState<GameRound[]>([]);
 
-  // Initialize game round
-  useEffect(() => {
-    document.title = 'Color Trading - WeNews';
-    refreshWallet();
-    initializeRound();
-  }, []);
-
-  // Initialize a new round
-  const initializeRound = () => {
+  // Initialize a new round (wrapped in useCallback to prevent infinite loops)
+  const initializeRound = useCallback(() => {
     const now = Date.now();
     const newRound: GameRound = {
       id: `round-${now}`,
@@ -92,35 +85,21 @@ export default function Trading() {
     setTimeLeft(ROUND_DURATION);
     setBets([]);
     setSelectedColors([]);
-  };
+  }, []);
 
-  // Timer countdown
+  // Initialize game round on mount
   useEffect(() => {
-    if (!currentRound) return;
+    document.title = 'Color Trading - WeNews';
+    initializeRound();
+    
+    // Load wallet data separately when needed
+    refreshWallet().catch(err => {
+      console.error('Failed to load wallet:', err);
+    });
+  }, [initializeRound, refreshWallet]);
 
-    const interval = setInterval(() => {
-      const now = Date.now();
-      const remaining = currentRound.endTime - now;
-
-      if (remaining <= 0) {
-        // Round finished - draw winner
-        if (currentRound.status !== 'finished') {
-          drawWinner();
-        }
-      } else if (now >= currentRound.bettingEndTime && currentRound.status === 'betting') {
-        // Betting closed - waiting for result
-        setCurrentRound({ ...currentRound, status: 'drawing' });
-        setTimeLeft(remaining);
-      } else {
-        setTimeLeft(remaining);
-      }
-    }, 100);
-
-    return () => clearInterval(interval);
-  }, [currentRound]);
-
-  // Draw winner and calculate results
-  const drawWinner = () => {
+  // Draw winner and calculate results (wrapped in useCallback)
+  const drawWinner = useCallback(() => {
     if (!currentRound) return;
 
     // Select random winning color
@@ -156,7 +135,32 @@ export default function Trading() {
     setTimeout(() => {
       initializeRound();
     }, 5000);
-  };
+  }, [currentRound, bets, refreshWallet, initializeRound]);
+
+  // Timer countdown
+  useEffect(() => {
+    if (!currentRound) return;
+
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const remaining = currentRound.endTime - now;
+
+      if (remaining <= 0) {
+        // Round finished - draw winner
+        if (currentRound.status !== 'finished') {
+          drawWinner();
+        }
+      } else if (now >= currentRound.bettingEndTime && currentRound.status === 'betting') {
+        // Betting closed - waiting for result
+        setCurrentRound(prev => prev ? { ...prev, status: 'drawing' } : null);
+        setTimeLeft(remaining);
+      } else {
+        setTimeLeft(remaining);
+      }
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [currentRound?.id, currentRound?.endTime, currentRound?.bettingEndTime, currentRound?.status, drawWinner]);
 
   // Toggle color selection
   const toggleColor = (colorId: string) => {

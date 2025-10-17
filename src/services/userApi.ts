@@ -1,5 +1,6 @@
 import { apiClient, apiCall, ApiResponse } from "./apiClient";
 import { User } from "./authApi";
+import { STORAGE_KEYS } from "@/config";
 
 // Types
 export interface UpdateProfileData {
@@ -182,8 +183,8 @@ class UserService {
     );
 
     // Clear localStorage and redirect to login
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
+    localStorage.removeItem(STORAGE_KEYS.USER_DATA);
     window.location.href = "/login";
   }
 }

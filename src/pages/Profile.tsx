@@ -48,6 +48,11 @@ export default function Profile() {
   const { wallet } = useWallet();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
+  // DEBUG: Log user data
+  console.log('🔍 Profile Page - User from useAuth():', user);
+  console.log('🔍 Profile Page - User firstName:', user?.firstName);
+  console.log('🔍 Profile Page - User lastName:', user?.lastName);
+
   const getUserInitials = () => {
     if (!user) return 'U';
     const firstInitial = user.firstName?.[0] || '';

@@ -1,22 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { newsService } from '@/services/newsService';
+import { getFullArticleContent } from '@/services/externalNewsApi';
+import { Article } from '@/types/news';
 import Card from '@/components/common/Card';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
-import { formatDate } from '@/utils/helpers';
 import toast from 'react-hot-toast';
-
-interface Article {
-  id?: string;
-  title: string;
-  description: string;
-  url: string;
-  urlToImage?: string;
-  publishedAt: string;
-  source?: { id: string; name: string };
-  author?: string;
-  content?: string;
-}
+import { ExternalLink, Share2, ArrowLeft, Clock } from 'lucide-react';
 
 export default function NewsDetail() {
   const { id } = useParams<{ id: string }>();
@@ -53,34 +43,36 @@ export default function NewsDetail() {
     return () => clearInterval(interval);
   }, [article, hasEarnedReward]);
 
-  const fetchArticleDetail = async (articleId: string) => {
+  const fetchArticleDetail = async (_articleId: string) => {
     try {
       setLoading(true);
       
-      // Decode URL if it's encoded
-      const decodedId = decodeURIComponent(articleId);
-      
-      // Try to fetch full content from news service
-      // For now, use description as content
-      const content = 'Article content will be loaded here';
-      setFullContent(content);
-      
-      // For now, we'll create a mock article since we might not have stored articles
-      // In production, you'd fetch from your backend
-      setArticle({
-        id: decodedId,
-        title: 'Article Title',
-        description: content,
-        url: decodedId,
-        urlToImage: '',
-        publishedAt: new Date().toISOString(),
-        source: { id: '', name: 'News Source' },
-        author: 'Unknown',
-        content: content,
-      });
+      // Try to get article from sessionStorage first (passed from News page)
+      const cachedArticle = sessionStorage.getItem('currentArticle');
+      if (cachedArticle) {
+        const parsedArticle: Article = JSON.parse(cachedArticle);
+        setArticle(parsedArticle);
+        
+        // Try to fetch full content if available
+        if (parsedArticle.id) {
+          const fullText = await getFullArticleContent(parsedArticle.id);
+          if (fullText) {
+            setFullContent(fullText);
+          } else {
+            setFullContent(parsedArticle.description || '');
+          }
+        } else {
+          setFullContent(parsedArticle.description || '');
+        }
+      } else {
+        // If no cached article, redirect back to news
+        toast.error('Article not found');
+        navigate('/news');
+      }
     } catch (err: any) {
       console.error('Error fetching article:', err);
       toast.error('Failed to load article');
+      navigate('/news');
     } finally {
       setLoading(false);
     }
@@ -89,9 +81,12 @@ export default function NewsDetail() {
   const awardReadingReward = async () => {
     try {
       // Call API to award reading reward
-      await newsService.markAsRead(article!.id || article!.url);
-      setHasEarnedReward(true);
-      toast.success('Reading reward earned! ₹2 added to your wallet');
+      const articleId = article!.id || article!.url || '';
+      if (articleId) {
+        await newsService.markAsRead(articleId);
+        setHasEarnedReward(true);
+        toast.success('Reading reward earned! ₹2 added to your wallet');
+      }
     } catch (error) {
       console.error('Failed to award reading reward:', error);
     }
@@ -160,19 +155,17 @@ export default function NewsDetail() {
         onClick={() => navigate('/news')}
         className="flex items-center text-muted-foreground hover:text-foreground mb-6 transition-colors"
       >
-        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-        </svg>
+        <ArrowLeft className="w-5 h-5 mr-2" />
         Back to News
       </button>
 
       {/* Article Card */}
       <Card className="overflow-hidden">
         {/* Article Image */}
-        {article.urlToImage && (
+        {article.thumbnail && (
           <div className="w-full h-96 overflow-hidden">
             <img
-              src={article.urlToImage}
+              src={article.thumbnail}
               alt={article.title}
               className="w-full h-full object-cover"
               onError={(e) => {
@@ -187,10 +180,16 @@ export default function NewsDetail() {
           {/* Source & Date */}
           <div className="flex items-center justify-between mb-4 text-sm text-muted-foreground">
             <div className="flex items-center gap-4">
-              <span className="font-medium">{article.source?.name || 'Unknown Source'}</span>
+              <span className="px-3 py-1 rounded-full bg-primary/10 text-primary font-medium">
+                {article.category}
+              </span>
+              <span className="font-medium">{article.source || 'Unknown Source'}</span>
               {article.author && <span>By {article.author}</span>}
             </div>
-            <span>{formatDate(article.publishedAt)}</span>
+            <span className="flex items-center gap-1">
+              <Clock className="w-4 h-4" />
+              {article.timeAgo}
+            </span>
           </div>
 
           {/* Title */}
@@ -229,19 +228,41 @@ export default function NewsDetail() {
             </div>
           )}
 
-          {/* Description */}
-          {article.description && (
-            <div className="text-lg text-muted-foreground mb-6 leading-relaxed">
-              {article.description}
-            </div>
-          )}
-
           {/* Full Content */}
-          <div className="prose prose-lg max-w-none mb-8">
+          <div className="prose prose-lg max-w-none mb-6">
             <div className="text-foreground leading-relaxed whitespace-pre-wrap">
-              {fullContent || article.content || article.description}
+              {fullContent || article.description}
             </div>
           </div>
+
+          {/* Truncated Content Notice */}
+          {((fullContent || article.description || '').includes('[पूरा लेख पढ़ने के लिए') || 
+            (fullContent || article.description || '').includes('Full article available')) && (
+            <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6 mb-6">
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                    <ExternalLink className="w-6 h-6 text-primary" />
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-foreground mb-2">
+                    Continue Reading on Original Source
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    This is a preview. Click the button below to read the complete article on the publisher's website.
+                  </p>
+                  <button
+                    onClick={handleOpenOriginal}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    Read Full Article
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Action Buttons */}
           <div className="flex flex-wrap gap-4 pt-6 border-t">
@@ -249,9 +270,7 @@ export default function NewsDetail() {
               onClick={handleOpenOriginal}
               className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-              </svg>
+              <ExternalLink className="w-5 h-5" />
               Read Original Article
             </button>
 
@@ -259,9 +278,7 @@ export default function NewsDetail() {
               onClick={handleShare}
               className="flex items-center gap-2 px-6 py-3 bg-card text-foreground rounded-lg hover:bg-accent transition-colors border"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-              </svg>
+              <Share2 className="w-5 h-5" />
               Share Article
             </button>
           </div>

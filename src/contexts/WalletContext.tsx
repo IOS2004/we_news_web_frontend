@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { walletService } from '@/services/walletService';
 import type { Wallet, Transaction } from '@/types';
 import toast from 'react-hot-toast';
@@ -19,7 +19,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const refreshWallet = async () => {
+  const refreshWallet = useCallback(async () => {
     try {
       setIsLoading(true);
       const walletData = await walletService.getWallet();
@@ -30,9 +30,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const refreshTransactions = async () => {
+  const refreshTransactions = useCallback(async () => {
     try {
       const response = await walletService.getTransactions(1, 20);
       setTransactions(response.data);
@@ -40,9 +40,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       console.error('Failed to fetch transactions:', error);
       // Don't show error toast - handled by interceptor
     }
-  };
+  }, []);
 
-  const addMoney = async (amount: number) => {
+  const addMoney = useCallback(async (amount: number) => {
     try {
       const paymentData = await walletService.addMoney(amount);
       toast.success('Payment initiated');
@@ -51,7 +51,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       toast.error(error.message || 'Failed to initiate payment');
       throw error;
     }
-  };
+  }, []);
 
   // DO NOT load wallet on mount - let pages call refreshWallet when needed
   // This prevents infinite loops when user is not authenticated

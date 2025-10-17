@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getTopHeadlines, getArticlesByLanguage, type Article } from '@/services/externalNewsApi';
+import { getTopHeadlines, getArticlesByLanguage } from '@/services/externalNewsApi';
+import { Article } from '@/types/news';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
-import { formatDate } from '@/utils/helpers';
 import toast from 'react-hot-toast';
 
 const categories = [
@@ -59,7 +59,9 @@ export default function News() {
   };
 
   const handleArticleClick = (article: Article) => {
-    navigate(`/news/${article.id || encodeURIComponent(article.url)}`);
+    // Save article to sessionStorage for the detail page
+    sessionStorage.setItem('currentArticle', JSON.stringify(article));
+    navigate(`/news/${article.id || encodeURIComponent(article.url || article.title)}`);
   };
 
   return (
@@ -117,10 +119,10 @@ export default function News() {
               onClick={() => handleArticleClick(article)}
             >
               {/* Article Image */}
-              {article.urlToImage && (
+              {article.thumbnail && (
                 <div className="w-full h-48 overflow-hidden">
                   <img
-                    src={article.urlToImage}
+                    src={article.thumbnail}
                     alt={article.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     onError={(e) => {
@@ -132,10 +134,12 @@ export default function News() {
 
               {/* Article Content */}
               <div className="p-4">
-                {/* Source & Date */}
+                {/* Category & Time */}
                 <div className="flex items-center justify-between mb-2 text-xs text-muted-foreground">
-                  <span className="font-medium">{article.source?.name || 'Unknown Source'}</span>
-                  <span>{formatDate(article.publishedAt)}</span>
+                  <span className="px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">
+                    {article.category}
+                  </span>
+                  <span>{article.timeAgo}</span>
                 </div>
 
                 {/* Title */}

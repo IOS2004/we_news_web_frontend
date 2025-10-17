@@ -1,5 +1,6 @@
 import axios, { AxiosInstance, AxiosError } from "axios";
 import toast from "react-hot-toast";
+import { STORAGE_KEYS } from "@/config";
 
 // API Configuration
 const API_BASE_URL =
@@ -19,7 +20,7 @@ export const apiClient: AxiosInstance = axios.create({
 // Request interceptor - Add auth token
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -49,10 +50,17 @@ apiClient.interceptors.response.use(
     switch (status) {
       case 401:
         // Unauthorized - Clear auth and redirect to login
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-        toast.error("Session expired. Please login again.");
-        window.location.href = "/login";
+        // Only redirect if not already on auth pages to prevent loops
+        const currentPath = window.location.pathname;
+        if (!currentPath.includes('/auth/') && !currentPath.includes('/guest-topup')) {
+          localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
+          localStorage.removeItem(STORAGE_KEYS.USER_DATA);
+          toast.error("Session expired. Please login again.");
+          // Use setTimeout to avoid redirect during component render
+          setTimeout(() => {
+            window.location.href = "/auth/signin";
+          }, 100);
+        }
         break;
 
       case 403:

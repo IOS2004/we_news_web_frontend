@@ -22,8 +22,20 @@ export const authService = {
 
   // Get current user
   async getCurrentUser(): Promise<User> {
-    const response = await api.get<ApiResponse<User>>("/auth/me");
-    return response.data.data!;
+    const response = await api.get<any>("/auth/me");
+    console.log('📡 API Response for /auth/me:', response.data);
+    
+    // Handle different response formats
+    if (response.data?.user) {
+      return response.data.user;
+    }
+    if (response.data?.data?.user) {
+      return response.data.data.user;
+    }
+    if (response.data?.data) {
+      return response.data.data;
+    }
+    return response.data;
   },
 
   // Update profile
