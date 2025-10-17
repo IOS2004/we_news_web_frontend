@@ -15,6 +15,7 @@ export interface User {
   level: number;
   avatar?: string;
   phoneNumber?: string;
+  dateOfBirth?: string;
   createdAt: string;
   updatedAt: string;
 }

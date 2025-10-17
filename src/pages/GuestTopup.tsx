@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import Input from '@/components/common/Input';
@@ -27,6 +28,7 @@ const MIN_DEPOSIT_AMOUNT = 0;
 export default function GuestTopup() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
   const [formData, setFormData] = useState<GuestUserData>({
     email: '',
     dateOfBirth: '',
@@ -38,6 +40,20 @@ export default function GuestTopup() {
   });
   const [errors, setErrors] = useState<Partial<GuestUserData>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Auto-fill user data if logged in
+  useEffect(() => {
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        email: user.email || '',
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        dateOfBirth: user.dateOfBirth || '',
+        // Don't auto-fill phoneNumber since there's no field for it in the form
+      }));
+    }
+  }, [user]);
 
   // Prefill amount if passed from AddMoney page
   useEffect(() => {
