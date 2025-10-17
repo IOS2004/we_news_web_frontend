@@ -119,14 +119,13 @@ export default function Profile() {
         </div>
       </Card>
 
-      {/* Earnings & Plans Section */}
+      {/* Account Section */}
       <Card className="mb-4 p-6">
-        <h3 className="text-lg font-semibold mb-4 text-foreground">Earnings & Plans</h3>
+        <h3 className="text-lg font-semibold mb-4 text-foreground">Account</h3>
         <div className="space-y-2">
-          <MenuItem title="My Wallet" icon="💰" onClick={() => navigate('/wallet')} />
-          <MenuItem title="My Earnings" icon="📈" onClick={() => toast('Coming soon!', { icon: 'ℹ️' })} />
-          <MenuItem title="My Plans" icon="💳" onClick={() => navigate('/plans')} />
-          <MenuItem title="My Withdrawals" icon="💸" onClick={() => navigate('/withdrawals')} />
+          <MenuItem title="Edit Profile" icon="✏️" onClick={() => navigate('/edit-profile')} />
+          <MenuItem title="Settings" icon="⚙️" onClick={() => navigate('/settings')} />
+          <MenuItem title="Help & Support" icon="❓" onClick={() => toast('Contact: support@wenews.com', { icon: 'ℹ️', duration: 5000 })} />
         </div>
       </Card>
 
@@ -136,26 +135,13 @@ export default function Profile() {
         <div className="space-y-2">
           <MenuItem title="My Labels" icon="🏷️" onClick={() => toast('Coming soon!', { icon: 'ℹ️' })} />
           <MenuItem title="Rewards & Badges" icon="🎖️" onClick={() => toast('Coming soon!', { icon: 'ℹ️' })} />
-        </div>
-      </Card>
-
-      {/* Community Section */}
-      <Card className="mb-4 p-6">
-        <h3 className="text-lg font-semibold mb-4 text-foreground">Community</h3>
-        <div className="space-y-2">
-          <MenuItem title="My Network" icon="👥" onClick={() => navigate('/network')} />
-          <MenuItem title="Community Feed" icon="🌐" onClick={() => toast('Coming soon!', { icon: 'ℹ️' })} />
           <MenuItem title="Community Benefits" icon="🎁" onClick={() => toast('Coming soon!', { icon: 'ℹ️' })} />
         </div>
       </Card>
 
-      {/* Other Section */}
-      <Card className="mb-4 p-6">
-        <h3 className="text-lg font-semibold mb-4 text-foreground">Other</h3>
+      {/* Logout Section */}
+      <Card className="mb-4 p-6 border-red-200 bg-red-50/30">
         <div className="space-y-2">
-          <MenuItem title="Refer & Earn" icon="🔗" onClick={() => navigate('/network')} />
-          <MenuItem title="Help & Support" icon="❓" onClick={() => toast('Contact: support@wenews.com', { icon: 'ℹ️', duration: 5000 })} />
-          <MenuItem title="Settings" icon="⚙️" onClick={() => navigate('/settings')} />
           <MenuItem 
             title="Logout" 
             icon="🚪" 

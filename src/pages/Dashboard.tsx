@@ -455,7 +455,11 @@ export default function Dashboard() {
               </div>
               
               <button 
-                onClick={() => navigate('/network')}
+                onClick={() => {
+                  // Navigate to network page with first active plan or no planId if no investments
+                  const planId = investments.length > 0 ? investments[0].id : '';
+                  navigate(planId ? `/network?planId=${planId}` : '/network');
+                }}
                 className="w-full py-3 bg-gradient-to-r from-green-500 via-green-600 to-emerald-600 text-white rounded-xl font-bold hover:from-green-600 hover:to-emerald-700 hover:shadow-2xl active:scale-95 transition-all duration-300 shadow-lg transform hover:-translate-y-1 flex items-center justify-center gap-2"
               >
                 <span>View Full Network</span>

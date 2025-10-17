@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import { formatCurrency } from '@/utils/helpers';
 import toast from 'react-hot-toast';
+import { investmentService, UserInvestment } from '@/services/investmentApi';
 
 interface Level {
   level: number;
@@ -34,91 +36,89 @@ interface NetworkData {
   levels: Level[];
 }
 
-// Mock network data
-const mockNetworkData: NetworkData = {
-  planName: 'Base Plan',
-  planColor: '#3B82F6',
-  totalNetworkSize: 47,
-  directReferrals: 3,
-  activeThisMonth: 28,
-  totalEarnings: 15750,
-  monthlyEarnings: 1350,
-  levels: [
-    { 
-      level: 1, 
-      unlocked: true, 
-      unlockDate: '2024-01-22', 
-      requirement: 3, 
-      current: 3, 
-      commission: 300, 
-      members: [
-        { id: 'u1', name: 'Rahul Kumar', joinDate: '2024-01-16', status: 'Active', earnings: 300 },
-        { id: 'u2', name: 'Priya Sharma', joinDate: '2024-01-18', status: 'Active', earnings: 300 },
-        { id: 'u3', name: 'Amit Singh', joinDate: '2024-01-20', status: 'Active', earnings: 300 }
-      ]
-    },
-    { 
-      level: 2, 
-      unlocked: true, 
-      unlockDate: '2024-02-06', 
-      requirement: 9, 
-      current: 12, 
-      commission: 150, 
-      members: [
-        { id: 'u4', name: 'Sneha Patel', joinDate: '2024-01-25', status: 'Active', earnings: 150 },
-        { id: 'u5', name: 'Rohit Verma', joinDate: '2024-01-28', status: 'Active', earnings: 150 },
-        { id: 'u6', name: 'Kavya Reddy', joinDate: '2024-02-02', status: 'Active', earnings: 150 },
-        { id: 'u7', name: 'Arjun Gupta', joinDate: '2024-02-05', status: 'Active', earnings: 150 }
-      ]
-    },
-    { 
-      level: 3, 
-      unlocked: true, 
-      unlockDate: '2024-03-22', 
-      requirement: 27, 
-      current: 32, 
-      commission: 75, 
-      members: [
-        { id: 'u8', name: 'Deepak Joshi', joinDate: '2024-02-15', status: 'Active', earnings: 75 },
-        { id: 'u9', name: 'Ritu Agarwal', joinDate: '2024-02-20', status: 'Active', earnings: 75 },
-        { id: 'u10', name: 'Vikash Roy', joinDate: '2024-03-01', status: 'Inactive', earnings: 0 }
-      ]
-    },
-    { 
-      level: 4, 
-      unlocked: false, 
-      unlockDate: null, 
-      requirement: 81, 
-      current: 0, 
-      commission: 50, 
-      members: []
-    },
-    { 
-      level: 5, 
-      unlocked: false, 
-      unlockDate: null, 
-      requirement: 243, 
-      current: 0, 
-      commission: 25, 
-      members: []
-    }
-  ]
-};
-
 export default function Network() {
   const { user } = useAuth();
-  const [networkData] = useState<NetworkData>(mockNetworkData);
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [investments, setInvestments] = useState<UserInvestment[]>([]);
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
+  const [networkData, setNetworkData] = useState<NetworkData | null>(null);
   const [selectedLevel, setSelectedLevel] = useState<number>(1);
   const [viewMode, setViewMode] = useState<'overview' | 'tree' | 'members'>('overview');
   const [referralLink, setReferralLink] = useState('');
+  const [loading, setLoading] = useState(true);
 
+  // Load user's investments
+  useEffect(() => {
+    const loadInvestments = async () => {
+      try {
+        setLoading(true);
+        const data = await investmentService.getMyInvestments();
+        const formattedData = data.map(investmentService.formatInvestmentForUI);
+        setInvestments(formattedData);
+
+        // Get planId from URL or use first active plan
+        const planIdFromUrl = searchParams.get('planId');
+        if (planIdFromUrl && formattedData.some(inv => inv.id === planIdFromUrl)) {
+          setSelectedPlanId(planIdFromUrl);
+        } else if (formattedData.length > 0) {
+          setSelectedPlanId(formattedData[0].id);
+        }
+      } catch (error) {
+        console.error('Failed to load investments:', error);
+        toast.error('Failed to load your plans');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadInvestments();
+  }, []);
+
+  // Update URL when plan selection changes
+  useEffect(() => {
+    if (selectedPlanId) {
+      setSearchParams({ planId: selectedPlanId });
+      loadNetworkData(selectedPlanId);
+    }
+  }, [selectedPlanId]);
+
+  // Generate referral link
   useEffect(() => {
     document.title = 'Network - WeNews';
-    // Generate referral link
     const baseUrl = window.location.origin;
-    const code = user?.username || user?.id || 'USER123';
+    const code = user?.referralCode || user?.username || 'USER123';
     setReferralLink(`${baseUrl}/auth/signup?ref=${code}`);
   }, [user]);
+
+  const loadNetworkData = async (planId: string) => {
+    try {
+      // TODO: Replace with actual API call to get plan-specific network data
+      // const response = await fetch(`/api/investment/${planId}/network`);
+      // const data = await response.json();
+      
+      // For now, use investment data to populate network stats
+      const investment = investments.find(inv => inv.id === planId);
+      if (!investment) return;
+
+      // Mock network structure - replace with actual API data
+      const mockData: NetworkData = {
+        planName: investment.planName,
+        planColor: investment.color || '#3B82F6',
+        totalNetworkSize: investment.totalReferrals || 0,
+        directReferrals: investment.directReferrals || 0,
+        activeThisMonth: investment.activeReferrals || 0,
+        totalEarnings: investment.referralEarnings || 0,
+        monthlyEarnings: 0, // TODO: Get from API
+        levels: [] // TODO: Get from API
+      };
+
+      setNetworkData(mockData);
+    } catch (error) {
+      console.error('Failed to load network data:', error);
+      toast.error('Failed to load network data');
+    }
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -147,15 +147,87 @@ export default function Network() {
     }
   };
 
-  const selectedLevelData = networkData.levels.find(l => l.level === selectedLevel);
+  const selectedLevelData = networkData?.levels.find(l => l.level === selectedLevel);
+  const selectedInvestment = investments.find(inv => inv.id === selectedPlanId);
+
+  if (loading) {
+    return (
+      <div className="p-6 max-w-7xl mx-auto">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading network data...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (investments.length === 0) {
+    return (
+      <div className="p-6 max-w-7xl mx-auto">
+        <h1 className="text-3xl font-bold text-foreground mb-6">My Network</h1>
+        <Card className="p-12 text-center">
+          <div className="text-6xl mb-4">📊</div>
+          <h3 className="text-xl font-semibold mb-2">No Active Plans</h3>
+          <p className="text-muted-foreground mb-6">
+            Subscribe to a plan to start building your network and earning referral commissions.
+          </p>
+          <Button onClick={() => navigate('/plans')} className="bg-blue-600 hover:bg-blue-700">
+            View Available Plans
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!networkData || !selectedInvestment) {
+    return (
+      <div className="p-6 max-w-7xl mx-auto">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <p className="text-muted-foreground">Failed to load network data</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
-      <h1 className="text-3xl font-bold text-foreground mb-6">My Network</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold text-foreground">My Network</h1>
+        
+        {/* Plan Selector */}
+        {investments.length > 1 && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Select Plan:</span>
+            <select
+              value={selectedPlanId || ''}
+              onChange={(e) => setSelectedPlanId(e.target.value)}
+              className="px-4 py-2 border border-border rounded-lg bg-background text-sm font-medium"
+            >
+              {investments.map((investment) => (
+                <option key={investment.id} value={investment.id}>
+                  {investment.planName} - {investment.status}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
 
       {/* Network Overview Header */}
-      <div className="mb-6 p-6 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 text-white">
-        <h2 className="text-2xl font-bold mb-4">{networkData.planName} Network</h2>
+      <div 
+        className="mb-6 p-6 rounded-xl text-white"
+        style={{ 
+          background: `linear-gradient(135deg, ${networkData.planColor}dd, ${networkData.planColor}aa)` 
+        }}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-2xl font-bold">{networkData.planName} Network</h2>
+          <div className="px-3 py-1 bg-white/20 rounded-full text-sm font-medium">
+            {selectedInvestment.status}
+          </div>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="text-center">
             <div className="text-3xl font-bold">{networkData.totalNetworkSize}</div>
@@ -167,7 +239,7 @@ export default function Network() {
           </div>
           <div className="text-center">
             <div className="text-3xl font-bold">{networkData.activeThisMonth}</div>
-            <div className="text-white/80 text-sm mt-1">Active This Month</div>
+            <div className="text-white/80 text-sm mt-1">Active Members</div>
           </div>
         </div>
       </div>
@@ -235,42 +307,60 @@ export default function Network() {
         </Card>
       </div>
 
-      {/* View Mode Toggle */}
-      <div className="flex gap-2 mb-6">
-        <button
-          onClick={() => setViewMode('overview')}
-          className={`px-6 py-2 rounded-lg font-medium transition-colors ${
-            viewMode === 'overview'
-              ? 'bg-blue-600 text-white'
-              : 'bg-muted hover:bg-muted/80'
-          }`}
-        >
-          Overview
-        </button>
-        <button
-          onClick={() => setViewMode('tree')}
-          className={`px-6 py-2 rounded-lg font-medium transition-colors ${
-            viewMode === 'tree'
-              ? 'bg-blue-600 text-white'
-              : 'bg-muted hover:bg-muted/80'
-          }`}
-        >
-          Tree View
-        </button>
-        <button
-          onClick={() => setViewMode('members')}
-          className={`px-6 py-2 rounded-lg font-medium transition-colors ${
-            viewMode === 'members'
-              ? 'bg-blue-600 text-white'
-              : 'bg-muted hover:bg-muted/80'
-          }`}
-        >
-          Members
-        </button>
-      </div>
+      {/* API Integration Notice */}
+      {(!networkData.levels || networkData.levels.length === 0) && (
+        <Card className="mb-6 p-6 bg-yellow-50 border-yellow-200">
+          <div className="flex items-start gap-3">
+            <div className="text-2xl">ℹ️</div>
+            <div>
+              <h3 className="font-semibold mb-1">Network Levels Coming Soon</h3>
+              <p className="text-sm text-muted-foreground">
+                Detailed level-wise network breakdown and member listings will be available once the backend API integration is complete.
+                Currently showing aggregate network statistics for this plan.
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
 
-      {/* Content based on view mode */}
-      {viewMode === 'overview' && (
+      {/* View Mode Toggle */}
+      {networkData.levels && networkData.levels.length > 0 && (
+        <>
+          <div className="flex gap-2 mb-6">
+            <button
+              onClick={() => setViewMode('overview')}
+              className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+                viewMode === 'overview'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-muted hover:bg-muted/80'
+              }`}
+            >
+              Overview
+            </button>
+            <button
+              onClick={() => setViewMode('tree')}
+              className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+                viewMode === 'tree'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-muted hover:bg-muted/80'
+              }`}
+            >
+              Tree View
+            </button>
+            <button
+              onClick={() => setViewMode('members')}
+              className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+                viewMode === 'members'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-muted hover:bg-muted/80'
+              }`}
+            >
+              Members
+            </button>
+          </div>
+
+          {/* Content based on view mode */}
+          {viewMode === 'overview' && (
         <div>
           <h3 className="text-xl font-semibold mb-4">Level Progress</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -450,6 +540,8 @@ export default function Network() {
             </Card>
           )}
         </div>
+      )}
+        </>
       )}
     </div>
   );
