@@ -4,9 +4,11 @@ import { STORAGE_KEYS } from "@/config";
 
 // API Configuration
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+  import.meta.env.VITE_API_BASE_URL ||
+  import.meta.env.VITE_API_URL ||
+  "http://localhost:5000/api";
 const API_TIMEOUT = 60000; // 60 seconds for cold starts
-  console.log(API_BASE_URL);
+console.log(API_BASE_URL);
 // Create axios instance
 export const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
@@ -52,7 +54,10 @@ apiClient.interceptors.response.use(
         // Unauthorized - Clear auth and redirect to login
         // Only redirect if not already on auth pages to prevent loops
         const currentPath = window.location.pathname;
-        if (!currentPath.includes('/auth/') && !currentPath.includes('/guest-topup')) {
+        if (
+          !currentPath.includes("/auth/") &&
+          !currentPath.includes("/guest-topup")
+        ) {
           localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
           localStorage.removeItem(STORAGE_KEYS.USER_DATA);
           toast.error("Session expired. Please login again.");

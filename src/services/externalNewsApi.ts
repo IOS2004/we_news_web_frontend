@@ -96,10 +96,11 @@ const mapTheNewsApiArticleToAppArticle = (apiArticle: any): Article => {
   }
 
   // Remove trailing ellipsis and add note if content appears truncated
-  const isTruncated = fullDescription.endsWith('...') || fullDescription.endsWith('…');
+  const isTruncated =
+    fullDescription.endsWith("...") || fullDescription.endsWith("…");
   if (isTruncated) {
     // Remove the ellipsis
-    fullDescription = fullDescription.replace(/\.{3}$|…$/, '').trim();
+    fullDescription = fullDescription.replace(/\.{3}$|…$/, "").trim();
     // Add helpful note in bilingual format
     fullDescription += `\n\n[पूरा लेख पढ़ने के लिए "Read Original Article" पर क्लिक करें / Click "Read Original Article" to read the full story]`;
   }
@@ -143,14 +144,15 @@ export const getFullArticleContent = async (
     if (response.data?.data) {
       const article = response.data.data;
       // Try to get the most complete content available
-      let content = article.content || article.description || article.snippet || null;
-      
+      let content =
+        article.content || article.description || article.snippet || null;
+
       // If content is truncated, indicate where to read full article
-      if (content && (content.endsWith('...') || content.endsWith('…'))) {
-        content = content.replace(/\.{3}$|…$/, '').trim();
+      if (content && (content.endsWith("...") || content.endsWith("…"))) {
+        content = content.replace(/\.{3}$|…$/, "").trim();
         content += `\n\n[Full article available at the original source. Click "Read Original Article" button below.]`;
       }
-      
+
       return content;
     }
 
