@@ -3,14 +3,14 @@ import { ShoppingCart } from 'lucide-react';
 
 interface CartSummaryBarProps {
   itemCount: number;
-  totalAmount: number;
+  finalAmount: number;
   isExpanded: boolean;
   onToggle: () => void;
 }
 
 export const CartSummaryBar: React.FC<CartSummaryBarProps> = ({
   itemCount,
-  totalAmount,
+  finalAmount,
   onToggle,
 }) => {
   return (
@@ -36,7 +36,7 @@ export const CartSummaryBar: React.FC<CartSummaryBarProps> = ({
         {/* Center Section: Cart Info */}
         <div className="text-left">
           <p className="text-sm font-black uppercase tracking-wide">CART</p>
-          <p className="text-xl font-black">₹{totalAmount}</p>
+          <p className="text-xl font-black">₹{finalAmount}</p>
         </div>
 
         {/* Right Section: View Cart */}

@@ -242,7 +242,7 @@ export default function Trading() {
 
       setBets(prev => [...prev, ...cartBets]);
       
-      toast.success(`Successfully placed ${cart.items.length} orders for ${formatCurrency(cart.totalAmount)}!`, {
+      toast.success(`Successfully placed ${cart.items.length} orders for ${formatCurrency(cart.finalAmount)}!`, {
         duration: 4000,
       });
       
@@ -330,8 +330,8 @@ export default function Trading() {
               </div>
             </div>
             <div className="text-right">
-              <div className="text-2xl font-black">₹{cart.totalAmount}</div>
-              <div className="text-sm opacity-90">Total Amount</div>
+              <div className="text-2xl font-black">₹{cart.finalAmount}</div>
+              <div className="text-sm opacity-90">Total (incl. 10% service charge)</div>
             </div>
           </div>
         </Card>
@@ -411,7 +411,7 @@ export default function Trading() {
             <Card className="p-6 bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
               {cart.totalItems > 0 && (
                 <div className="mb-3 p-2 bg-white/20 rounded-lg text-center text-sm">
-                  📦 {cart.totalItems} {cart.totalItems === 1 ? 'order' : 'orders'} in cart (₹{cart.totalAmount})
+                  📦 {cart.totalItems} {cart.totalItems === 1 ? 'order' : 'orders'} in cart (₹{cart.finalAmount})
                 </div>
               )}
               <div className="flex items-center justify-between mb-4">
@@ -564,7 +564,7 @@ export default function Trading() {
       {/* Cart Summary Bar - Fixed at bottom */}
       <CartSummaryBar
         itemCount={cart.totalItems}
-        totalAmount={cart.totalAmount}
+        finalAmount={cart.finalAmount}
         isExpanded={isCartOpen}
         onToggle={() => setIsCartOpen(!isCartOpen)}
       />

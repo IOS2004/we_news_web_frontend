@@ -42,7 +42,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   };
 
   // Check if user has sufficient balance
-  const hasInsufficientBalance = cart.totalAmount > walletBalance;
+  const hasInsufficientBalance = cart.finalAmount > walletBalance;
 
   // Group items by game type
   const colorItems = cart.items.filter((item) => item.gameType === 'color');
@@ -63,7 +63,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
         className={`fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl z-50 transform transition-transform duration-300 ease-out flex flex-col ${
           isOpen ? 'translate-y-0' : 'translate-y-full'
         }`}
-        style={{ maxHeight: '75vh' }}
+        style={{ height: '92vh', maxHeight: '92vh' }}
       >
         {/* Header */}
         <div className="sticky top-0 bg-gradient-to-r from-purple-600 via-blue-600 to-teal-600 text-white px-6 py-5 rounded-t-3xl">
@@ -91,7 +91,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
         </div>
 
         {/* Cart Items (Scrollable) */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+        <div className="flex-1 overflow-y-auto px-6 py-4" style={{ maxHeight: 'calc(92vh - 200px)' }}>
           {cart.items.length === 0 ? (
             <div className="text-center py-16">
               <div className="relative inline-block mb-6">
@@ -122,7 +122,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               </div>
             </div>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-4">
               {/* Color Trading Orders */}
               {colorItems.length > 0 && (
                 <div>
@@ -130,7 +130,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                     <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
                     Color Trading ({colorItems.length})
                   </h3>
-                  <div className="space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {colorItems.map((item) => (
                       <CartItem key={item.id} item={item} onRemove={onRemoveItem} />
                     ))}
@@ -145,7 +145,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                     <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
                     Number Trading ({numberItems.length})
                   </h3>
-                  <div className="space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {numberItems.map((item) => (
                       <CartItem key={item.id} item={item} onRemove={onRemoveItem} />
                     ))}
@@ -157,7 +157,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
         </div>
 
         {/* Footer (Always visible) */}
-        <div className="bg-gradient-to-t from-gray-50 to-white border-t border-gray-200 px-6 py-6">
+        <div className="flex-shrink-0 bg-gradient-to-t from-gray-50 to-white border-t border-gray-200 px-6 py-4">
           {/* Balance Warning */}
           {hasInsufficientBalance && (
             <div className="mb-4 p-4 bg-gradient-to-r from-red-50 to-orange-50 border-l-4 border-red-400 rounded-lg">
@@ -168,7 +168,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-red-800 mb-1">Insufficient Balance</p>
                   <p className="text-xs text-red-600">
-                    You need ₹{cart.totalAmount} but only have ₹{walletBalance} available
+                    You need ₹{cart.finalAmount} but only have ₹{walletBalance} available
                   </p>
                 </div>
               </div>
@@ -176,25 +176,41 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
           )}
 
           {/* Summary Card */}
-          <div className="mb-4 p-4 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 rounded-2xl border border-purple-100">
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Orders</p>
-                <p className="text-xl font-black text-gray-800">{cart.totalItems}</p>
+          <div className="mb-3 p-3 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 rounded-2xl border border-purple-100">
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-4 text-center">
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Orders</p>
+                  <p className="text-xl font-black text-gray-800">{cart.totalItems}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Potential Win</p>
+                  <p className="text-xl font-black text-green-600">₹{cart.totalAmount * 2}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Total</p>
-                <p className="text-xl font-black text-purple-600">₹{cart.totalAmount}</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Potential Win</p>
-                <p className="text-xl font-black text-green-600">₹{cart.totalAmount * 2}</p>
+              
+              {/* Price Breakdown */}
+              <div className="bg-white/70 rounded-xl p-3 space-y-2">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-600">Subtotal:</span>
+                  <span className="font-semibold text-gray-800">₹{cart.totalAmount}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-600">Service Charge (10%):</span>
+                  <span className="font-semibold text-orange-600">₹{cart.serviceCharge}</span>
+                </div>
+                <div className="border-t border-gray-200 pt-2">
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-purple-600">Total Amount:</span>
+                    <span className="text-xl font-black text-purple-600">₹{cart.finalAmount}</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="space-y-3">
+          <div className="space-y-2">
             {/* Submit Orders Button - Beautiful */}
             <button
               onClick={handleSubmit}
@@ -216,7 +232,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   </div>
                   <span>Place All {cart.totalItems} Orders</span>
                   <div className="bg-white/20 px-2 py-1 rounded-full text-sm font-black">
-                    ₹{cart.totalAmount}
+                    ₹{cart.finalAmount}
                   </div>
                 </>
               )}

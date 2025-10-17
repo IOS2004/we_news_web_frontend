@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from "react";
 
 // Cart item interface
 export interface CartItem {
   id: string; // Unique ID for cart item
   roundId: string;
-  gameType: 'color' | 'number';
+  gameType: "color" | "number";
   options: string[]; // Selected options (colors or numbers)
   amount: number;
   timestamp: number;
@@ -14,12 +14,15 @@ export interface CartItem {
 export interface Cart {
   items: CartItem[];
   totalAmount: number;
+  serviceCharge: number;
+  finalAmount: number;
   totalItems: number;
 }
 
 // Constants
-const CART_STORAGE_KEY = 'wenews_trading_cart';
+const CART_STORAGE_KEY = "wenews_trading_cart";
 const MAX_CART_ITEMS = 20;
+const SERVICE_CHARGE_PERCENTAGE = 0.1; // 10%
 
 // Generate unique cart item ID
 const generateCartItemId = (): string => {
@@ -31,12 +34,33 @@ const calculateTotalAmount = (items: CartItem[]): number => {
   return items.reduce((total, item) => total + item.amount, 0);
 };
 
+// Calculate service charge (10% of total amount)
+const calculateServiceCharge = (totalAmount: number): number => {
+  return Math.round(totalAmount * SERVICE_CHARGE_PERCENTAGE * 100) / 100;
+};
+
+// Calculate final amount (total + service charge)
+const calculateFinalAmount = (totalAmount: number): number => {
+  return totalAmount + calculateServiceCharge(totalAmount);
+};
+
+// Create complete cart object with all calculated values
+const createCartObject = (items: CartItem[]): Cart => {
+  const totalAmount = calculateTotalAmount(items);
+  const serviceCharge = calculateServiceCharge(totalAmount);
+  const finalAmount = calculateFinalAmount(totalAmount);
+  
+  return {
+    items,
+    totalAmount,
+    serviceCharge,
+    finalAmount,
+    totalItems: items.length,
+  };
+};
+
 export const useCart = () => {
-  const [cart, setCart] = useState<Cart>({
-    items: [],
-    totalAmount: 0,
-    totalItems: 0,
-  });
+  const [cart, setCart] = useState<Cart>(createCartObject([]));
   const [isLoading, setIsLoading] = useState(true);
 
   // Load cart from localStorage on mount
@@ -45,14 +69,10 @@ export const useCart = () => {
       const savedCart = localStorage.getItem(CART_STORAGE_KEY);
       if (savedCart) {
         const parsedCart: CartItem[] = JSON.parse(savedCart);
-        setCart({
-          items: parsedCart,
-          totalAmount: calculateTotalAmount(parsedCart),
-          totalItems: parsedCart.length,
-        });
+        setCart(createCartObject(parsedCart));
       }
     } catch (error) {
-      console.error('Failed to load cart from localStorage:', error);
+      console.error("Failed to load cart from localStorage:", error);
       localStorage.removeItem(CART_STORAGE_KEY);
     } finally {
       setIsLoading(false);
@@ -65,14 +85,16 @@ export const useCart = () => {
       try {
         localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart.items));
       } catch (error) {
-        console.error('Failed to save cart to localStorage:', error);
+        console.error("Failed to save cart to localStorage:", error);
       }
     }
   }, [cart.items, isLoading]);
 
   // Add item to cart
   const addItem = useCallback(
-    (item: Omit<CartItem, 'id' | 'timestamp'>): { success: boolean; message: string; cartItem?: CartItem } => {
+    (
+      item: Omit<CartItem, "id" | "timestamp">
+    ): { success: boolean; message: string; cartItem?: CartItem } => {
       // Validate max items
       if (cart.items.length >= MAX_CART_ITEMS) {
         return {
@@ -85,7 +107,7 @@ export const useCart = () => {
       if (!item.options || item.options.length === 0) {
         return {
           success: false,
-          message: 'Please select at least one option.',
+          message: "Please select at least one option.",
         };
       }
 
@@ -93,7 +115,7 @@ export const useCart = () => {
       if (!item.amount || item.amount <= 0) {
         return {
           success: false,
-          message: 'Amount must be greater than 0.',
+          message: "Amount must be greater than 0.",
         };
       }
 
@@ -106,15 +128,11 @@ export const useCart = () => {
 
       // Add to cart (duplicates are allowed)
       const updatedItems = [...cart.items, newCartItem];
-      setCart({
-        items: updatedItems,
-        totalAmount: calculateTotalAmount(updatedItems),
-        totalItems: updatedItems.length,
-      });
+      setCart(createCartObject(updatedItems));
 
       return {
         success: true,
-        message: 'Added to cart successfully!',
+        message: "Added to cart successfully!",
         cartItem: newCartItem,
       };
     },
@@ -125,23 +143,22 @@ export const useCart = () => {
   const removeItem = useCallback((itemId: string): boolean => {
     setCart((prevCart) => {
       const updatedItems = prevCart.items.filter((item) => item.id !== itemId);
-      return {
-        items: updatedItems,
-        totalAmount: calculateTotalAmount(updatedItems),
-        totalItems: updatedItems.length,
-      };
+      return createCartObject(updatedItems);
     });
     return true;
   }, []);
 
   // Update item in cart
   const updateItem = useCallback(
-    (itemId: string, updates: Partial<Omit<CartItem, 'id' | 'timestamp'>>): { success: boolean; message: string } => {
+    (
+      itemId: string,
+      updates: Partial<Omit<CartItem, "id" | "timestamp">>
+    ): { success: boolean; message: string } => {
       const itemIndex = cart.items.findIndex((item) => item.id === itemId);
       if (itemIndex === -1) {
         return {
           success: false,
-          message: 'Item not found in cart.',
+          message: "Item not found in cart.",
         };
       }
 
@@ -149,7 +166,7 @@ export const useCart = () => {
       if (updates.amount !== undefined && updates.amount <= 0) {
         return {
           success: false,
-          message: 'Amount must be greater than 0.',
+          message: "Amount must be greater than 0.",
         };
       }
 
@@ -157,7 +174,7 @@ export const useCart = () => {
       if (updates.options !== undefined && updates.options.length === 0) {
         return {
           success: false,
-          message: 'Please select at least one option.',
+          message: "Please select at least one option.",
         };
       }
 
@@ -168,15 +185,11 @@ export const useCart = () => {
         ...updates,
       };
 
-      setCart({
-        items: updatedItems,
-        totalAmount: calculateTotalAmount(updatedItems),
-        totalItems: updatedItems.length,
-      });
+      setCart(createCartObject(updatedItems));
 
       return {
         success: true,
-        message: 'Cart item updated successfully!',
+        message: "Cart item updated successfully!",
       };
     },
     [cart.items]
@@ -184,17 +197,13 @@ export const useCart = () => {
 
   // Clear entire cart
   const clearCart = useCallback(() => {
-    setCart({
-      items: [],
-      totalAmount: 0,
-      totalItems: 0,
-    });
+    setCart(createCartObject([]));
     localStorage.removeItem(CART_STORAGE_KEY);
   }, []);
 
   // Get items by game type
   const getItemsByGameType = useCallback(
-    (gameType: 'color' | 'number'): CartItem[] => {
+    (gameType: "color" | "number"): CartItem[] => {
       return cart.items.filter((item) => item.gameType === gameType);
     },
     [cart.items]
@@ -227,7 +236,7 @@ export const useCart = () => {
       }
       return {
         isValid: true,
-        message: 'Cart is valid.',
+        message: "Cart is valid.",
       };
     },
     [cart.totalAmount]
@@ -244,11 +253,7 @@ export const useCart = () => {
         }
         return true;
       });
-      return {
-        items: updatedItems,
-        totalAmount: calculateTotalAmount(updatedItems),
-        totalItems: updatedItems.length,
-      };
+      return createCartObject(updatedItems);
     });
     return removedCount;
   }, []);
