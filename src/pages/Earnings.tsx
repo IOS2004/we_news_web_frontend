@@ -71,7 +71,20 @@ const Earnings: React.FC = () => {
       setTodayEarnings(data);
     } catch (error: any) {
       console.error('Failed to fetch earnings:', error);
-      toast.error('Failed to load earnings data');
+      // Set fallback data instead of just showing error
+      setTodayEarnings({
+        total: 0,
+        breakdown: {
+          referral: 0,
+          investment: 0,
+          daily_login: 0,
+          trading: 0,
+          task: 0,
+          bonus: 0
+        },
+        transactions: []
+      });
+      toast.error('Using offline data. Please check your connection.');
     } finally {
       setLoading(false);
     }
@@ -222,7 +235,7 @@ const Earnings: React.FC = () => {
         </div>
 
         {/* Earnings Breakdown */}
-        {todayEarnings && (
+        {todayEarnings && todayEarnings.breakdown && (
           <div className="bg-white rounded-2xl shadow-xl p-6 mb-6 border border-gray-100">
             <h2 className="text-xl font-bold text-gray-900 mb-4">Earnings Breakdown</h2>
             
@@ -254,7 +267,7 @@ const Earnings: React.FC = () => {
             <div className="flex justify-center py-8">
               <RefreshCw className="w-8 h-8 text-blue-600 animate-spin" />
             </div>
-          ) : todayEarnings && todayEarnings.transactions.length > 0 ? (
+          ) : todayEarnings && todayEarnings.transactions && todayEarnings.transactions.length > 0 ? (
             <div className="space-y-3">
               {todayEarnings.transactions.slice(0, 10).map((transaction) => {
                 const Icon = getIconForSource(transaction.source);
@@ -286,6 +299,7 @@ const Earnings: React.FC = () => {
             <div className="text-center py-12">
               <Wallet className="w-16 h-16 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-600">No recent transactions</p>
+              <p className="text-sm text-gray-500 mt-2">Start earning by completing tasks and referring friends!</p>
             </div>
           )}
         </div>

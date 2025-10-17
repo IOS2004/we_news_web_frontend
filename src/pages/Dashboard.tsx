@@ -1,14 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { dashboardService } from '@/services/dashboardService';
 import { useWallet } from '@/contexts/WalletContext';
 import { useAuth } from '@/contexts/AuthContext';
 import Card from '@/components/common/Card';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
+import PlanCard from '@/components/PlanCard';
 import { formatCurrency } from '@/utils/helpers';
 import type { DashboardStats } from '@/types';
-import { TrendingUp, Wallet, Users, Newspaper, Palette, Hash, UserPlus } from 'lucide-react';
+import { TrendingUp, Wallet, Users, Newspaper, Palette, Hash, UserPlus, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
+import investmentService, { type UserInvestment } from '@/services/investmentApi';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -16,6 +18,9 @@ export default function Dashboard() {
   const { user } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [investments, setInvestments] = useState<UserInvestment[]>([]);
+  const [selectedPlanIndex, setSelectedPlanIndex] = useState(0);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadData();
@@ -25,6 +30,18 @@ export default function Dashboard() {
     try {
       // Load wallet data first
       await refreshWallet();
+      
+      // Load user investments
+      try {
+        const userInvestments = await investmentService.getMyInvestments();
+        const formattedInvestments = userInvestments.map(inv => 
+          investmentService.formatInvestmentForUI(inv)
+        );
+        setInvestments(formattedInvestments);
+      } catch (investError) {
+        console.log('No active investments found:', investError);
+        setInvestments([]);
+      }
       
       // Try to load stats, but don't fail if it doesn't work
       try {
@@ -38,7 +55,7 @@ export default function Dashboard() {
           todayEarnings: 0,
           walletBalance: 0,
           totalReferrals: 0,
-          activeInvestments: 0,
+          activeInvestments: investments.length,
           newsRead: 0,
           tradingProfit: 0,
         });
@@ -55,6 +72,7 @@ export default function Dashboard() {
         newsRead: 0,
         tradingProfit: 0,
       });
+      setInvestments([]);
     } finally {
       setIsLoading(false);
     }
@@ -68,7 +86,91 @@ export default function Dashboard() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-display font-bold text-text-primary">Dashboard</h1>
-        <p className="text-text-secondary mt-1">Welcome back! Here's your overview.</p>
+        <p className="text-text-secondary mt-1">Welcome back, {user?.firstName}!</p>
+      </div>
+
+      {/* Active Investment Plans Section */}
+      <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">Your Subscription Plans</h2>
+            <p className="text-sm text-gray-600">
+              {investments.length > 0 
+                ? `${investments.length} active ${investments.length === 1 ? 'plan' : 'plans'}`
+                : 'No active plans yet'
+              }
+            </p>
+          </div>
+          <button
+            onClick={() => navigate('/plans')}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Plus className="w-5 h-5" />
+            <span>Add Plan</span>
+          </button>
+        </div>
+
+        {investments.length === 0 ? (
+          /* Empty State */
+          <div className="bg-white rounded-xl p-8 text-center">
+            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <TrendingUp className="w-8 h-8 text-blue-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No Subscriptions Yet</h3>
+            <p className="text-gray-600 mb-4">Start your growth journey by choosing a plan</p>
+            <button
+              onClick={() => navigate('/plans')}
+              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all"
+            >
+              Browse Plans
+            </button>
+          </div>
+        ) : (
+          /* Investment Cards Slider */
+          <div className="relative">
+            <div 
+              ref={scrollContainerRef}
+              className="flex gap-6 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-4"
+              style={{ scrollSnapType: 'x mandatory' }}
+            >
+              {investments.map((investment, index) => (
+                <div 
+                  key={investment.id} 
+                  className="min-w-[350px] md:min-w-[400px] snap-start"
+                >
+                  <PlanCard 
+                    investment={investment} 
+                    isActive={index === selectedPlanIndex}
+                  />
+                </div>
+              ))}
+            </div>
+
+            {/* Pagination Dots */}
+            {investments.length > 1 && (
+              <div className="flex justify-center gap-2 mt-4">
+                {investments.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => {
+                      setSelectedPlanIndex(index);
+                      scrollContainerRef.current?.children[index]?.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'nearest',
+                        inline: 'center'
+                      });
+                    }}
+                    className={`h-2 rounded-full transition-all ${
+                      index === selectedPlanIndex 
+                        ? 'w-8 bg-blue-600' 
+                        : 'w-2 bg-gray-300'
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Stats Grid */}
@@ -295,7 +397,12 @@ export default function Dashboard() {
                   </div>
                   <div>
                     <h3 className="font-bold text-lg text-gray-800">Referral Network</h3>
-                    <p className="text-xs text-gray-500">Grow your team & earn more</p>
+                    <p className="text-xs text-gray-500">
+                      {investments.length > 0 
+                        ? `Across ${investments.length} ${investments.length === 1 ? 'plan' : 'plans'}`
+                        : 'Grow your team & earn more'
+                      }
+                    </p>
                   </div>
                 </div>
                 <div className="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full text-white text-sm font-bold shadow-md">
@@ -307,18 +414,24 @@ export default function Dashboard() {
               <div className="grid grid-cols-3 gap-4 mb-6">
                 <div className="bg-white/70 backdrop-blur-sm rounded-xl p-4 border border-green-200 transform hover:scale-105 transition-transform">
                   <Users className="w-6 h-6 text-green-600 mb-2" />
-                  <div className="text-3xl font-bold text-green-600 mb-1">{user?.totalReferrals || 0}</div>
-                  <div className="text-xs text-gray-600">Total Referrals</div>
+                  <div className="text-3xl font-bold text-green-600 mb-1">
+                    {investments.reduce((sum, inv) => sum + (inv.totalReferrals || 0), 0) || user?.totalReferrals || 0}
+                  </div>
+                  <div className="text-xs text-gray-600">Total Network</div>
                 </div>
                 <div className="bg-white/70 backdrop-blur-sm rounded-xl p-4 border border-emerald-200 transform hover:scale-105 transition-transform">
                   <Wallet className="w-6 h-6 text-emerald-600 mb-2" />
-                  <div className="text-3xl font-bold text-emerald-600 mb-1">{formatCurrency(user?.referralEarnings || 0)}</div>
-                  <div className="text-xs text-gray-600">Total Earnings</div>
+                  <div className="text-3xl font-bold text-emerald-600 mb-1">
+                    {formatCurrency(investments.reduce((sum, inv) => sum + (inv.referralEarnings || 0), 0) || user?.referralEarnings || 0)}
+                  </div>
+                  <div className="text-xs text-gray-600">Referral Earnings</div>
                 </div>
                 <div className="bg-white/70 backdrop-blur-sm rounded-xl p-4 border border-green-200 transform hover:scale-105 transition-transform">
                   <TrendingUp className="w-6 h-6 text-green-600 mb-2" />
-                  <div className="text-3xl font-bold text-green-600 mb-1">10%</div>
-                  <div className="text-xs text-gray-600">Commission</div>
+                  <div className="text-3xl font-bold text-green-600 mb-1">
+                    {investments.reduce((sum, inv) => sum + (inv.activeReferrals || 0), 0) || 0}
+                  </div>
+                  <div className="text-xs text-gray-600">Active Members</div>
                 </div>
               </div>
 
@@ -345,7 +458,7 @@ export default function Dashboard() {
                 onClick={() => navigate('/network')}
                 className="w-full py-3 bg-gradient-to-r from-green-500 via-green-600 to-emerald-600 text-white rounded-xl font-bold hover:from-green-600 hover:to-emerald-700 hover:shadow-2xl active:scale-95 transition-all duration-300 shadow-lg transform hover:-translate-y-1 flex items-center justify-center gap-2"
               >
-                <span>View Network Tree</span>
+                <span>View Full Network</span>
                 <Users className="w-4 h-4" />
               </button>
             </div>

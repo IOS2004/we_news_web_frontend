@@ -26,6 +26,7 @@ import Profile from './pages/Profile'
 import EditProfile from './pages/EditProfile'
 import Network from './pages/Network'
 import Plans from './pages/Plans'
+import PlanDetails from './pages/PlanDetails'
 import Settings from './pages/Settings'
 import Withdrawals from './pages/Withdrawals'
 import MyTrades from './pages/MyTrades'
@@ -79,6 +80,7 @@ function App() {
             <Route path="/edit-profile" element={<EditProfile />} />
             <Route path="/network" element={<Network />} />
             <Route path="/plans" element={<Plans />} />
+            <Route path="/plan-details/:investmentId" element={<PlanDetails />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/withdrawals" element={<Withdrawals />} />
           </Route>

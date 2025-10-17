@@ -10,16 +10,23 @@ export interface InvestmentPlan {
   id: string;
   name: string;
   description: string;
-  amount: number;
-  duration: number; // in days
-  dailyReturn: number;
-  totalReturn: number;
+  initialPayment: number;
+  contributionAmount: {
+    daily: number;
+    weekly: number;
+    monthly: number;
+  };
+  planValidity: number; // days
+  dailyEarnings: number;
+  weeklyEarnings: number;
+  monthlyEarnings: number;
+  totalEarnings: number;
   features: string[];
   isActive: boolean;
-  category: "basic" | "standard" | "premium" | "vip";
-  minInvestment?: number;
-  maxInvestment?: number;
-  riskLevel: "low" | "medium" | "high";
+  category?: "basic" | "standard" | "premium" | "vip";
+  color?: string;
+  gradient?: [string, string];
+  popular?: boolean;
   createdAt: string;
 }
 
@@ -27,24 +34,54 @@ export interface UserInvestment {
   id: string;
   userId: string;
   planId: string;
-  plan: InvestmentPlan;
-  amount: number;
+  planName: string;
+  frequency: "daily" | "weekly" | "monthly";
+  initialPayment: number;
+  contributionAmount: number;
+  planValidity: number;
   startDate: string;
-  endDate: string;
-  status: "active" | "completed" | "cancelled";
-  totalEarned: number;
+  expiryDate: string;
+  nextContributionDate: string;
+  totalContributions: number;
+  missedContributions: number;
+  contributionStreak: number;
+  totalEarnings: number;
+  investmentEarnings: number;
+  referralEarnings: number;
+  todayEarnings: number;
+  withdrawableBalance: number;
+  status: "active" | "paused" | "completed" | "cancelled";
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+
+  // Network/Referral data specific to this plan
+  networkSize?: number;
+  directReferrals?: number;
+  totalReferrals?: number;
+  activeReferrals?: number;
+
+  // UI-specific fields
+  color?: string;
+  daysRemaining?: number;
+
+  // Legacy support
+  plan?: InvestmentPlan;
+  amount?: number;
+  endDate?: string;
+  totalEarned?: number;
   lastPaidAt?: string;
   nextPaymentAt?: string;
-  remainingDays: number;
-  createdAt: string;
+  remainingDays?: number;
 }
 
 export interface InvestmentStats {
   totalInvested: number;
+  totalEarnings: number;
   activeInvestments: number;
   totalReturns: number;
-  monthlyReturns: number;
-  completedInvestments: number;
+  monthlyReturns?: number;
+  completedInvestments?: number;
   averageROI: number;
 }
 
@@ -123,6 +160,97 @@ class InvestmentService {
   }
 
   /**
+   * Get all user's active investments (for multi-plan support)
+   * Returns array of all active subscriptions
+   */
+  async getMyInvestments(): Promise<UserInvestment[]> {
+    try {
+      const response = await apiCall<
+        ApiResponse<{
+          investments?: UserInvestment[];
+          investment?: UserInvestment;
+        }>
+      >(apiClient.get("/investment/my-investments"));
+
+      // Handle different response formats
+      if (response.data?.investments) {
+        return response.data.investments;
+      }
+
+      // If backend returns single investment, wrap it
+      if (response.data?.investment) {
+        return [response.data.investment];
+      }
+
+      return [];
+    } catch (error) {
+      console.error("Error fetching user investments:", error);
+      // Try fallback to singular endpoint
+      try {
+        const singleResponse = await this.getUserInvestments({ limit: 1 });
+        return singleResponse.items || [];
+      } catch {
+        return [];
+      }
+    }
+  }
+
+  /**
+   * Get investment by ID
+   */
+  async getInvestmentById(
+    investmentId: string
+  ): Promise<UserInvestment | null> {
+    try {
+      const response = await apiCall<
+        ApiResponse<{ investment: UserInvestment }>
+      >(apiClient.get(`/investment/${investmentId}`));
+      return response.data?.investment || null;
+    } catch (error) {
+      console.error("Error fetching investment:", error);
+      return null;
+    }
+  }
+
+  /**
+   * Calculate days remaining for an investment
+   */
+  calculateDaysRemaining(expiryDate: string | Date): number {
+    const expiry =
+      typeof expiryDate === "string" ? new Date(expiryDate) : expiryDate;
+    const now = new Date();
+    const daysRemaining = Math.ceil(
+      (expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+    );
+    return Math.max(0, daysRemaining);
+  }
+
+  /**
+   * Format investment data for UI display
+   */
+  formatInvestmentForUI(investment: UserInvestment): UserInvestment {
+    const colorMapping: { [key: string]: string } = {
+      base: "#3B82F6",
+      bass: "#3B82F6",
+      silver: "#9CA3AF",
+      gold: "#F59E0B",
+      diamond: "#8B5CF6",
+      platinum: "#10B981",
+      elite: "#DC2626",
+    };
+
+    const planKey = investment.planName?.toLowerCase() || "base";
+    const color = colorMapping[planKey] || "#3B82F6";
+    const daysRemaining = this.calculateDaysRemaining(investment.expiryDate);
+
+    return {
+      ...investment,
+      color,
+      daysRemaining,
+    };
+  }
+
+  /**
    * Get investment statistics
    * Note: Backend may not have this endpoint; derive from my-investment
    */
@@ -136,6 +264,7 @@ class InvestmentService {
       // Fallback if endpoint doesn't exist
       return {
         totalInvested: 0,
+        totalEarnings: 0,
         activeInvestments: 0,
         totalReturns: 0,
         monthlyReturns: 0,
@@ -224,21 +353,25 @@ class InvestmentService {
    */
   calculateReturns(
     plan: InvestmentPlan,
-    amount: number
+    amount: number,
+    frequency: "daily" | "weekly" | "monthly" = "daily"
   ): {
     daily: number;
     weekly: number;
     monthly: number;
     total: number;
   } {
-    const dailyReturn = (amount * plan.dailyReturn) / 100;
-    const totalReturn = (amount * plan.totalReturn) / 100;
+    // Use the new structure with separate earnings
+    const daily = plan.dailyEarnings || 0;
+    const weekly = plan.weeklyEarnings || daily * 7;
+    const monthly = plan.monthlyEarnings || daily * 30;
+    const total = plan.totalEarnings || monthly * (plan.planValidity / 30);
 
     return {
-      daily: dailyReturn,
-      weekly: dailyReturn * 7,
-      monthly: dailyReturn * 30,
-      total: totalReturn,
+      daily,
+      weekly,
+      monthly,
+      total,
     };
   }
 }
