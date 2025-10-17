@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
 import { useWallet } from '@/contexts/WalletContext';
 import Card from '@/components/common/Card';
-import Button from '@/components/common/Button';
 import { formatCurrency } from '@/utils/helpers';
 import toast from 'react-hot-toast';
+import { useCart } from '@/hooks/useCart';
+import { CartSummaryBar } from '@/components/trading/CartSummaryBar';
+import { CartDrawer } from '@/components/trading/CartDrawer';
+import { ShoppingCart } from 'lucide-react';
 
 // Types
 interface Plan {
@@ -64,12 +66,15 @@ const colors: Color[] = [
 
 export default function Trading() {
   const { wallet, refreshWallet } = useWallet();
+  const { cart, addItem, removeItem, clearCart, validateCartBalance } = useCart();
   const [selectedPlan, setSelectedPlan] = useState<Plan>(plans[0]);
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [currentRound, setCurrentRound] = useState<GameRound | null>(null);
   const [timeLeft, setTimeLeft] = useState(0);
   const [bets, setBets] = useState<Bet[]>([]);
   const [gameHistory, setGameHistory] = useState<GameRound[]>([]);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Initialize a new round (wrapped in useCallback to prevent infinite loops)
   const initializeRound = useCallback(() => {
@@ -178,8 +183,8 @@ export default function Trading() {
     });
   };
 
-  // Place bet
-  const placeBet = async () => {
+  // Add to cart
+  const addToCart = () => {
     if (!currentRound || currentRound.status !== 'betting') {
       toast.error('Betting is closed!');
       return;
@@ -192,29 +197,66 @@ export default function Trading() {
 
     const totalBetAmount = selectedColors.length * selectedPlan.amount;
     
-    if ((wallet?.balance || 0) < totalBetAmount) {
-      toast.error('Insufficient balance!');
+    // Add each color as a separate order or as a single combined order
+    const result = addItem({
+      roundId: currentRound.id,
+      gameType: 'color',
+      options: [...selectedColors], // Copy the array
+      amount: totalBetAmount,
+    });
+
+    if (result.success) {
+      toast.success(result.message);
+      setSelectedColors([]);
+    } else {
+      toast.error(result.message);
+    }
+  };
+
+  // Submit all cart orders
+  const submitCartOrders = async () => {
+    if (!currentRound) {
+      toast.error('No active round!');
       return;
     }
 
-    // Create bets
-    const newBets: Bet[] = selectedColors.map(colorId => ({
-      id: `bet-${Date.now()}-${colorId}`,
-      colorId,
-      amount: selectedPlan.amount,
-      timestamp: Date.now(),
-    }));
+    // Validate balance
+    const balanceCheck = validateCartBalance(wallet?.balance || 0);
+    if (!balanceCheck.isValid) {
+      toast.error(balanceCheck.message);
+      return;
+    }
 
-    setBets(prev => [...prev, ...newBets]);
-    setSelectedColors([]);
+    setIsSubmitting(true);
     
-    // Deduct balance (in real app, this would be API call)
-    toast.success(`Bet placed: ${formatCurrency(totalBetAmount)} on ${selectedColors.length} color(s)`, {
-      duration: 3000,
-    });
-    
-    // Refresh wallet to show updated balance
-    setTimeout(() => refreshWallet(), 500);
+    try {
+      // In this simulation, we'll just move cart items to bets
+      // In real app, this would call the batch API endpoint
+      
+      const cartBets: Bet[] = cart.items.map(item => ({
+        id: `bet-${Date.now()}-${Math.random()}`,
+        colorId: item.options[0], // For now, use first color
+        amount: item.amount,
+        timestamp: Date.now(),
+      }));
+
+      setBets(prev => [...prev, ...cartBets]);
+      
+      toast.success(`Successfully placed ${cart.items.length} orders for ${formatCurrency(cart.totalAmount)}!`, {
+        duration: 4000,
+      });
+      
+      clearCart();
+      setIsCartOpen(false);
+      
+      // Refresh wallet to show updated balance
+      setTimeout(() => refreshWallet(), 500);
+    } catch (error) {
+      console.error('Failed to submit orders:', error);
+      toast.error('Failed to place orders. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Format time remaining
@@ -244,19 +286,12 @@ export default function Trading() {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-6 max-w-7xl mx-auto pb-6">
       <div className="mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-3xl font-bold text-foreground">Trading Games</h1>
-          <Link 
-            to="/trading/number"
-            className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition-colors"
-          >
-            Switch to Number Trading →
-          </Link>
+        <div className="mb-4">
+          <h1 className="text-3xl font-bold text-foreground">Color Trading Game</h1>
         </div>
-        <h2 className="text-2xl font-semibold text-foreground mb-2">Color Trading Game</h2>
-        <p className="text-muted-foreground">
+        <p className="text-muted-foreground text-lg">
           Select colors and place your bets. Win 2x your bet amount!
         </p>
       </div>
@@ -282,6 +317,25 @@ export default function Trading() {
           )}
         </div>
       </Card>
+
+      {/* Cart Status Banner */}
+      {cart.totalItems > 0 && (
+        <Card className="mb-6 p-4 bg-gradient-to-r from-orange-500 to-red-500 text-white border-2 border-yellow-400">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <ShoppingCart size={24} />
+              <div>
+                <div className="text-lg font-black">🛒 {cart.totalItems} ORDERS IN CART</div>
+                <div className="text-sm opacity-90">Click the cart button to review and place orders</div>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-2xl font-black">₹{cart.totalAmount}</div>
+              <div className="text-sm opacity-90">Total Amount</div>
+            </div>
+          </div>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Game Area */}
@@ -352,9 +406,14 @@ export default function Trading() {
             </div>
           </Card>
 
-          {/* Place Bet Button */}
+          {/* Add to Cart Button */}
           {selectedColors.length > 0 && (
             <Card className="p-6 bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
+              {cart.totalItems > 0 && (
+                <div className="mb-3 p-2 bg-white/20 rounded-lg text-center text-sm">
+                  📦 {cart.totalItems} {cart.totalItems === 1 ? 'order' : 'orders'} in cart (₹{cart.totalAmount})
+                </div>
+              )}
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <div className="text-sm opacity-90">Total Bet Amount</div>
@@ -365,13 +424,14 @@ export default function Trading() {
                   <div className="text-2xl font-bold">{selectedColors.length}</div>
                 </div>
               </div>
-              <Button 
-                onClick={placeBet}
+              <button 
+                onClick={addToCart}
                 disabled={currentRound?.status !== 'betting'}
-                className="w-full bg-white text-orange-600 hover:bg-gray-100 font-bold text-lg py-3"
+                className="w-full bg-white text-orange-600 hover:bg-orange-50 hover:text-orange-700 font-bold text-lg py-4 px-6 rounded-xl flex items-center justify-center gap-3 shadow-lg border-2 border-orange-200 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105"
               >
-                {currentRound?.status === 'betting' ? 'Place Bet' : 'Betting Closed'}
-              </Button>
+                <ShoppingCart size={22} />
+                {currentRound?.status === 'betting' ? 'Add to Cart' : 'Betting Closed'}
+              </button>
             </Card>
           )}
 
@@ -500,6 +560,26 @@ export default function Trading() {
           </Card>
         </div>
       </div>
+
+      {/* Cart Summary Bar - Fixed at bottom */}
+      <CartSummaryBar
+        itemCount={cart.totalItems}
+        totalAmount={cart.totalAmount}
+        isExpanded={isCartOpen}
+        onToggle={() => setIsCartOpen(!isCartOpen)}
+      />
+
+      {/* Cart Drawer - Slides up from bottom */}
+      <CartDrawer
+        cart={cart}
+        isOpen={isCartOpen}
+        onClose={() => setIsCartOpen(false)}
+        onRemoveItem={removeItem}
+        onClearCart={clearCart}
+        onSubmitOrders={submitCartOrders}
+        walletBalance={wallet?.balance || 0}
+        isSubmitting={isSubmitting}
+      />
     </div>
   );
 }

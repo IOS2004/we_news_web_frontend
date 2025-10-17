@@ -69,6 +69,7 @@ function App() {
             <Route path="/news/trending" element={<Trending />} />
             <Route path="/trading" element={<Trading />} />
             <Route path="/trading/number" element={<NumberTrading />} />
+            <Route path="/number-trading" element={<NumberTrading />} />
             <Route path="/trading/history" element={<MyTrades />} />
             <Route path="/wallet" element={<Wallet />} />
             <Route path="/earnings" element={<Earnings />} />

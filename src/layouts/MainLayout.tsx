@@ -5,7 +5,6 @@ import { formatCurrency } from '@/utils/helpers';
 import { 
   Home, 
   Newspaper, 
-  TrendingUp, 
   Wallet, 
   Users, 
   Settings, 
@@ -18,7 +17,9 @@ import {
   DollarSign,
   ShoppingBag,
   Gift,
-  BarChart3
+  BarChart3,
+  Palette,
+  Hash
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -31,7 +32,8 @@ export default function MainLayout() {
   const navigation = [
     { name: 'Dashboard', to: '/dashboard', icon: Home },
     { name: 'News', to: '/news', icon: Newspaper },
-    { name: 'Trading', to: '/trading', icon: TrendingUp },
+    { name: 'Color Trading', to: '/trading', icon: Palette },
+    { name: 'Number Trading', to: '/number-trading', icon: Hash },
     { name: 'My Trades', to: '/trading/history', icon: BarChart3 },
     { name: 'Wallet', to: '/wallet', icon: Wallet },
     { name: 'Add Money', to: '/add-money', icon: PlusCircle },
