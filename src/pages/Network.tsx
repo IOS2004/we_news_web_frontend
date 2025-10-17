@@ -7,33 +7,47 @@ import { formatCurrency } from '@/utils/helpers';
 import toast from 'react-hot-toast';
 import { investmentService, UserInvestment } from '@/services/investmentApi';
 
-interface Level {
-  level: number;
-  unlocked: boolean;
-  unlockDate: string | null;
-  requirement: number;
-  current: number;
-  commission: number;
-  members: Member[];
-}
-
 interface Member {
   id: string;
-  name: string;
-  joinDate: string;
-  status: 'Active' | 'Inactive';
+  username: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phoneNumber: string;
+  joinedAt: string;
+  isActive: boolean;
+  referralCode: string;
+  totalReferrals: number;
+  commissionEarned: number;
+}
+
+interface Level {
+  level: number;
+  totalMembers: number;
+  activeMembers: number;
+  members: Member[];
   earnings: number;
 }
 
 interface NetworkData {
-  planName: string;
-  planColor: string;
-  totalNetworkSize: number;
-  directReferrals: number;
-  activeThisMonth: number;
-  totalEarnings: number;
-  monthlyEarnings: number;
+  investment: {
+    id: string;
+    planName: string;
+    totalReferrals: number;
+    currentLevel: number;
+    investmentAmount: number;
+    startDate: any;
+    expiryDate: any;
+    status: string;
+  };
   levels: Level[];
+  summary: {
+    totalMembers: number;
+    activeMembers: number;
+    totalLevels: number;
+    totalEarnings: number;
+    referralEarnings: number;
+  };
 }
 
 export default function Network() {
@@ -93,30 +107,14 @@ export default function Network() {
 
   const loadNetworkData = async (planId: string) => {
     try {
-      // TODO: Replace with actual API call to get plan-specific network data
-      // const response = await fetch(`/api/investment/${planId}/network`);
-      // const data = await response.json();
-      
-      // For now, use investment data to populate network stats
-      const investment = investments.find(inv => inv.id === planId);
-      if (!investment) return;
-
-      // Mock network structure - replace with actual API data
-      const mockData: NetworkData = {
-        planName: investment.planName,
-        planColor: investment.color || '#3B82F6',
-        totalNetworkSize: investment.totalReferrals || 0,
-        directReferrals: investment.directReferrals || 0,
-        activeThisMonth: investment.activeReferrals || 0,
-        totalEarnings: investment.referralEarnings || 0,
-        monthlyEarnings: 0, // TODO: Get from API
-        levels: [] // TODO: Get from API
-      };
-
-      setNetworkData(mockData);
+      setLoading(true);
+      const data = await investmentService.getInvestmentNetwork(planId);
+      setNetworkData(data);
     } catch (error) {
       console.error('Failed to load network data:', error);
       toast.error('Failed to load network data');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -219,26 +217,26 @@ export default function Network() {
       <div 
         className="mb-6 p-6 rounded-xl text-white"
         style={{ 
-          background: `linear-gradient(135deg, ${networkData.planColor}dd, ${networkData.planColor}aa)` 
+          background: `linear-gradient(135deg, ${selectedInvestment?.color || '#3B82F6'}dd, ${selectedInvestment?.color || '#3B82F6'}aa)` 
         }}
       >
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-bold">{networkData.planName} Network</h2>
+          <h2 className="text-2xl font-bold">{networkData.investment.planName} Network</h2>
           <div className="px-3 py-1 bg-white/20 rounded-full text-sm font-medium">
-            {selectedInvestment.status}
+            {networkData.investment.status}
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="text-center">
-            <div className="text-3xl font-bold">{networkData.totalNetworkSize}</div>
+            <div className="text-3xl font-bold">{networkData.summary.totalMembers}</div>
             <div className="text-white/80 text-sm mt-1">Total Network</div>
           </div>
           <div className="text-center">
-            <div className="text-3xl font-bold">{networkData.directReferrals}</div>
-            <div className="text-white/80 text-sm mt-1">Direct Referrals</div>
+            <div className="text-3xl font-bold">{networkData.levels.length > 0 ? networkData.levels[0].totalMembers : 0}</div>
+            <div className="text-white/80 text-sm mt-1">Direct Referrals (Level 1)</div>
           </div>
           <div className="text-center">
-            <div className="text-3xl font-bold">{networkData.activeThisMonth}</div>
+            <div className="text-3xl font-bold">{networkData.summary.activeMembers}</div>
             <div className="text-white/80 text-sm mt-1">Active Members</div>
           </div>
         </div>
@@ -270,15 +268,18 @@ export default function Network() {
           <div className="space-y-4">
             <div>
               <div className="text-3xl font-bold text-green-600">
-                {formatCurrency(networkData.totalEarnings)}
+                {formatCurrency(networkData.summary.referralEarnings)}
               </div>
-              <div className="text-sm text-muted-foreground mt-1">Total Earnings</div>
+              <div className="text-sm text-muted-foreground mt-1">Referral Earnings</div>
             </div>
             <div>
               <div className="text-2xl font-bold text-blue-600">
-                {formatCurrency(networkData.monthlyEarnings)}
+                {formatCurrency(networkData.summary.totalEarnings)}
               </div>
-              <div className="text-sm text-muted-foreground mt-1">This Month</div>
+              <div className="text-sm text-muted-foreground mt-1">Total Earnings (Plan)</div>
+            </div>
+            <div className="text-sm text-muted-foreground">
+              Active Levels: {networkData.summary.totalLevels}
             </div>
           </div>
         </Card>
@@ -362,69 +363,55 @@ export default function Network() {
           {/* Content based on view mode */}
           {viewMode === 'overview' && (
         <div>
-          <h3 className="text-xl font-semibold mb-4">Level Progress</h3>
+          <h3 className="text-xl font-semibold mb-4">Level Breakdown</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {networkData.levels.map((level) => (
               <div
                 key={level.level}
                 onClick={() => {
-                  if (level.unlocked) {
-                    setSelectedLevel(level.level);
-                    setViewMode('members');
-                  }
+                  setSelectedLevel(level.level);
+                  setViewMode('members');
                 }}
               >
                 <Card
-                  className={`p-4 cursor-pointer transition-all ${
-                    level.unlocked
-                      ? 'border-2 border-green-500 hover:shadow-lg'
-                      : 'border-2 border-gray-300 opacity-60'
-                  } ${selectedLevel === level.level ? 'ring-2 ring-blue-500' : ''}`}
+                  className={`p-4 cursor-pointer transition-all border-2 border-green-500 hover:shadow-lg ${
+                    selectedLevel === level.level ? 'ring-2 ring-blue-500' : ''
+                  }`}
                 >
                 <div className="flex items-center justify-between mb-3">
                   <h4 className="text-lg font-bold">Level {level.level}</h4>
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                    level.unlocked ? 'bg-green-500' : 'bg-gray-400'
-                  }`}>
-                    <span className="text-white text-xs">
-                      {level.unlocked ? '✓' : '🔒'}
-                    </span>
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center bg-green-500">
+                    <span className="text-white text-xs">✓</span>
                   </div>
                 </div>
 
-                {level.unlocked ? (
-                  <div className="text-xs text-muted-foreground mb-3">
-                    Unlocked: {formatDate(level.unlockDate!)}
-                  </div>
-                ) : (
-                  <div className="text-xs text-muted-foreground mb-3">
-                    Requires: {level.requirement} members
-                  </div>
-                )}
+                <div className="text-xs text-muted-foreground mb-3">
+                  {level.activeMembers} active / {level.totalMembers} total
+                </div>
 
                 <div className="grid grid-cols-2 gap-3 mb-3">
                   <div>
-                    <div className="text-2xl font-bold text-blue-600">{level.current}</div>
+                    <div className="text-2xl font-bold text-blue-600">{level.totalMembers}</div>
                     <div className="text-xs text-muted-foreground">Members</div>
                   </div>
                   <div>
-                    <div className="text-2xl font-bold text-green-600">₹{level.commission}</div>
-                    <div className="text-xs text-muted-foreground">Commission</div>
+                    <div className="text-2xl font-bold text-green-600">{formatCurrency(level.earnings)}</div>
+                    <div className="text-xs text-muted-foreground">Earnings</div>
                   </div>
                 </div>
 
-                {level.unlocked && level.current > 0 && (
+                {level.totalMembers > 0 && (
                   <div>
                     <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
                       <div
                         className="h-full bg-green-500"
                         style={{
-                          width: `${Math.min((level.current / level.requirement) * 100, 100)}%`
+                          width: `${(level.activeMembers / level.totalMembers) * 100}%`
                         }}
                       />
                     </div>
                     <div className="text-xs text-muted-foreground mt-1 text-center">
-                      {level.current}/{level.requirement} completed
+                      {Math.round((level.activeMembers / level.totalMembers) * 100)}% active
                     </div>
                   </div>
                 )}
@@ -449,14 +436,14 @@ export default function Network() {
 
             {/* Level Branches */}
             {networkData.levels
-              .filter(l => l.unlocked && l.current > 0)
+              .filter(l => l.totalMembers > 0)
               .map((level) => (
                 <div key={level.level} className="flex flex-col items-center">
                   <div className="text-sm font-semibold text-muted-foreground mb-3">
-                    Level {level.level} ({level.current} members)
+                    Level {level.level} ({level.totalMembers} members)
                   </div>
                   <div className="flex flex-wrap justify-center gap-4">
-                    {Array.from({ length: Math.min(level.current, 10) }, (_, i) => (
+                    {Array.from({ length: Math.min(level.totalMembers, 10) }, (_, i) => (
                       <div
                         key={i}
                         className="w-12 h-12 rounded-full bg-green-500 text-white flex items-center justify-center font-bold text-sm shadow-md"
@@ -464,9 +451,9 @@ export default function Network() {
                         {i + 1}
                       </div>
                     ))}
-                    {level.current > 10 && (
+                    {level.totalMembers > 10 && (
                       <div className="w-12 h-12 rounded-full bg-gray-400 text-white flex items-center justify-center font-bold text-xs">
-                        +{level.current - 10}
+                        +{level.totalMembers - 10}
                       </div>
                     )}
                   </div>
@@ -480,11 +467,11 @@ export default function Network() {
         <div>
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-xl font-semibold">
-              Level {selectedLevel} Members ({selectedLevelData.current})
+              Level {selectedLevel} Members ({selectedLevelData.totalMembers})
             </h3>
             <div className="flex gap-2">
               {networkData.levels.map((level) => (
-                level.unlocked && level.current > 0 && (
+                level.totalMembers > 0 && (
                   <button
                     key={level.level}
                     onClick={() => setSelectedLevel(level.level)}
@@ -505,28 +492,39 @@ export default function Network() {
             {selectedLevelData.members.map((member) => (
               <Card key={member.id} className="p-4">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white flex items-center justify-center font-bold">
-                    {member.name.split(' ').map(n => n[0]).join('')}
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white flex items-center justify-center font-bold text-sm">
+                    {member.username.substring(0, 2).toUpperCase()}
                   </div>
                   <div className="flex-1">
-                    <div className="font-semibold">{member.name}</div>
+                    <div className="font-semibold">{member.firstName} {member.lastName}</div>
                     <div className="text-xs text-muted-foreground">
-                      Joined: {formatDate(member.joinDate)}
+                      @{member.username}
                     </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2 text-xs mb-3">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Joined:</span>
+                    <span className="font-medium">{formatDate(member.joinedAt)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Referrals:</span>
+                    <span className="font-medium">{member.totalReferrals}</span>
                   </div>
                 </div>
 
                 <div className="flex items-center justify-between pt-3 border-t border-border">
                   <div className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    member.status === 'Active'
+                    member.isActive
                       ? 'bg-green-100 text-green-700'
                       : 'bg-yellow-100 text-yellow-700'
                   }`}>
-                    {member.status}
+                    {member.isActive ? 'Active' : 'Inactive'}
                   </div>
                   <div className="text-right">
-                    <div className="text-lg font-bold text-green-600">₹{member.earnings}</div>
-                    <div className="text-xs text-muted-foreground">Earned</div>
+                    <div className="text-lg font-bold text-green-600">{formatCurrency(member.commissionEarned)}</div>
+                    <div className="text-xs text-muted-foreground">Commission</div>
                   </div>
                 </div>
               </Card>

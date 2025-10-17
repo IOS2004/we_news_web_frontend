@@ -349,6 +349,17 @@ class InvestmentService {
   }
 
   /**
+   * Get network data for a specific investment (level-wise breakdown)
+   * Actual endpoint: GET /api/investment/:id/network
+   */
+  async getInvestmentNetwork(investmentId: string): Promise<any> {
+    const response = await apiCall<ApiResponse<any>>(
+      apiClient.get(`/investment/${investmentId}/network`)
+    );
+    return response.data!;
+  }
+
+  /**
    * Calculate potential returns for a plan
    */
   calculateReturns(
