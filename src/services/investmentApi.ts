@@ -363,9 +363,7 @@ class InvestmentService {
    * Calculate potential returns for a plan
    */
   calculateReturns(
-    plan: InvestmentPlan,
-    amount: number,
-    frequency: "daily" | "weekly" | "monthly" = "daily"
+    plan: InvestmentPlan
   ): {
     daily: number;
     weekly: number;

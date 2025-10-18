@@ -9,8 +9,7 @@ import {
   DollarSign,
   Network,
   Target,
-  Award,
-  Activity
+  Award
 } from 'lucide-react';
 import Card from '@/components/common/Card';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
