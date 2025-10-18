@@ -76,26 +76,24 @@ export default function Wallet() {
           </div>
           
           <div className="flex flex-wrap gap-3">
-            <Button
-              variant="secondary"
-              className="flex-1 min-w-[140px] bg-white text-primary hover:bg-gray-100"
+            <button
+              className="flex-1 min-w-[140px] bg-white text-primary font-semibold py-3 px-4 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center shadow-md"
               onClick={() => navigate('/add-money')}
             >
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
               Add Money
-            </Button>
-            <Button
-              variant="secondary"
-              className="flex-1 min-w-[140px] bg-white text-primary hover:bg-gray-100"
+            </button>
+            <button
+              className="flex-1 min-w-[140px] bg-white text-primary font-semibold py-3 px-4 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center shadow-md"
               onClick={() => navigate('/withdrawals')}
             >
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
               </svg>
               Withdraw
-            </Button>
+            </button>
           </div>
         </div>
       </Card>

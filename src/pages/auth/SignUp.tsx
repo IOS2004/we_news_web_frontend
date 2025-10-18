@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import Button from '@/components/common/Button';
 import Input from '@/components/common/Input';
@@ -9,6 +9,7 @@ import type { SignUpData } from '@/types';
 export default function SignUp() {
   const navigate = useNavigate();
   const { signUp } = useAuth();
+  const [searchParams] = useSearchParams();
   const [formData, setFormData] = useState<SignUpData>({
     username: '',
     email: '',
@@ -22,6 +23,17 @@ export default function SignUp() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Partial<SignUpData & { confirmPassword: string }>>({});
+
+  // Auto-fill referral code from URL parameter
+  useEffect(() => {
+    const refCode = searchParams.get('ref');
+    if (refCode) {
+      setFormData(prev => ({
+        ...prev,
+        referralCode: refCode
+      }));
+    }
+  }, [searchParams]);
 
   const validate = (): boolean => {
     const newErrors: any = {};

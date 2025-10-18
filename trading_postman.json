@@ -1,0 +1,169 @@
+{
+  "info": {
+    "name": "User Trading API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Place Trade",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{TOKEN}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"roundId\": \"ROUND123\",\n  \"tradeType\": \"colour\",\n  \"selection\": \"red\",\n  \"amount\": 100\n}"
+        },
+        "url": {
+          "raw": "{{BASE_URL}}/api/trading/place-trade",
+          "host": ["{{BASE_URL}}"],
+          "path": ["api", "trading", "place-trade"]
+        }
+      }
+    },
+    {
+      "name": "Get Active Rounds",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{TOKEN}}"
+          }
+        ],
+        "url": {
+          "raw": "{{BASE_URL}}/api/trading/active-rounds?roundType=colour",
+          "host": ["{{BASE_URL}}"],
+          "path": ["api", "trading", "active-rounds"],
+          "query": [
+            {
+              "key": "roundType",
+              "value": "colour"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get My Trades in Round",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{TOKEN}}"
+          }
+        ],
+        "url": {
+          "raw": "{{BASE_URL}}/api/trading/rounds/:roundId/my-trades",
+          "host": ["{{BASE_URL}}"],
+          "path": ["api", "trading", "rounds", ":roundId", "my-trades"],
+          "variable": [
+            {
+              "key": "roundId",
+              "value": "ROUND123"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get All My Trades",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{TOKEN}}"
+          }
+        ],
+        "url": {
+          "raw": "{{BASE_URL}}/api/trading/my-trades",
+          "host": ["{{BASE_URL}}"],
+          "path": ["api", "trading", "my-trades"]
+        }
+      }
+    },
+    {
+      "name": "Get Round Details",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{TOKEN}}"
+          }
+        ],
+        "url": {
+          "raw": "{{BASE_URL}}/api/trading/rounds/:roundId",
+          "host": ["{{BASE_URL}}"],
+          "path": ["api", "trading", "rounds", ":roundId"],
+          "variable": [
+            {
+              "key": "roundId",
+              "value": "ROUND123"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Check My Winnings",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{TOKEN}}"
+          }
+        ],
+        "url": {
+          "raw": "{{BASE_URL}}/api/trading/rounds/:roundId/check-winnings",
+          "host": ["{{BASE_URL}}"],
+          "path": ["api", "trading", "rounds", ":roundId", "check-winnings"],
+          "variable": [
+            {
+              "key": "roundId",
+              "value": "ROUND123"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Wallet Balance",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{TOKEN}}"
+          }
+        ],
+        "url": {
+          "raw": "{{BASE_URL}}/api/trading/wallet-balance",
+          "host": ["{{BASE_URL}}"],
+          "path": ["api", "trading", "wallet-balance"]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "BASE_URL",
+      "value": "http://localhost:5000"
+    },
+    {
+      "key": "TOKEN",
+      "value": "your_jwt_token_here"
+    }
+  ]
+}

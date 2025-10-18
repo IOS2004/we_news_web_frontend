@@ -31,34 +31,41 @@ export interface InvestmentPlan {
 }
 
 export interface UserInvestment {
+  // Core fields from backend
   id: string;
   userId: string;
   planId: string;
   planName: string;
-  frequency: "daily" | "weekly" | "monthly";
-  initialPayment: number;
-  contributionAmount: number;
-  planValidity: number;
-  startDate: string;
-  expiryDate: string;
-  nextContributionDate: string;
-  totalContributions: number;
-  missedContributions: number;
-  contributionStreak: number;
+  investmentAmount: number;
+  validity: number; // Plan validity in days (from backend)
+  startDate: string | any; // Can be Firestore Timestamp
+  expiryDate: string | any; // Can be Firestore Timestamp
+  currentLevel: number;
+  totalReferrals: number;
   totalEarnings: number;
-  investmentEarnings: number;
-  referralEarnings: number;
-  todayEarnings: number;
-  withdrawableBalance: number;
-  status: "active" | "paused" | "completed" | "cancelled";
+  lastPayoutDate: string | any; // Can be Firestore Timestamp
   isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
+  status: "active" | "paused" | "completed" | "cancelled";
+  createdAt: string | any;
+  updatedAt: string | any;
+
+  // Optional fields that may or may not exist
+  frequency?: "daily" | "weekly" | "monthly";
+  initialPayment?: number;
+  contributionAmount?: number;
+  planValidity?: number; // Alias for validity
+  nextContributionDate?: string;
+  totalContributions?: number;
+  missedContributions?: number;
+  contributionStreak?: number;
+  investmentEarnings?: number;
+  referralEarnings?: number;
+  todayEarnings?: number;
+  withdrawableBalance?: number;
 
   // Network/Referral data specific to this plan
   networkSize?: number;
   directReferrals?: number;
-  totalReferrals?: number;
   activeReferrals?: number;
 
   // UI-specific fields
@@ -141,36 +148,55 @@ class InvestmentService {
     limit?: number;
     status?: "active" | "completed" | "cancelled";
   }): Promise<PaginatedResponse<UserInvestment>> {
-    const response = await apiCall<
-      ApiResponse<{
-        investment: UserInvestment;
-        pagination: any;
-      }>
-    >(apiClient.get("/investment/my-investment", { params }));
+    try {
+      const response = await apiCall<
+        ApiResponse<{
+          investment: UserInvestment | null;
+          pagination?: any;
+        }>
+      >(apiClient.get("/investment/my-investment", { params }));
 
-    // Backend returns single investment, wrap in array for consistency
-    return {
-      items: response.data!.investment ? [response.data!.investment] : [],
-      pagination: response.data!.pagination || {
-        page: 1,
-        limit: 1,
-        total: response.data!.investment ? 1 : 0,
-      },
-    };
+      // Backend returns single investment, wrap in array for consistency
+      const hasInvestment = !!response.data?.investment;
+      return {
+        items: hasInvestment ? [response.data!.investment!] : [],
+        pagination: {
+          currentPage: 1,
+          totalPages: 1,
+          totalItems: hasInvestment ? 1 : 0,
+          hasNext: false,
+          hasPrev: false,
+        },
+      };
+    } catch (error) {
+      console.error("Error fetching user investment:", error);
+      // Return empty result instead of throwing
+      return {
+        items: [],
+        pagination: {
+          currentPage: 1,
+          totalPages: 0,
+          totalItems: 0,
+          hasNext: false,
+          hasPrev: false,
+        },
+      };
+    }
   }
 
   /**
    * Get all user's active investments (for multi-plan support)
    * Returns array of all active subscriptions
+   * Actual endpoint: GET /api/investment/my-investment (singular)
    */
   async getMyInvestments(): Promise<UserInvestment[]> {
     try {
       const response = await apiCall<
         ApiResponse<{
           investments?: UserInvestment[];
-          investment?: UserInvestment;
+          investment?: UserInvestment | null;
         }>
-      >(apiClient.get("/investment/my-investments"));
+      >(apiClient.get("/investment/my-investment"));
 
       // Handle different response formats
       if (response.data?.investments) {
@@ -182,16 +208,12 @@ class InvestmentService {
         return [response.data.investment];
       }
 
+      // No investment found (null or undefined)
       return [];
     } catch (error) {
       console.error("Error fetching user investments:", error);
-      // Try fallback to singular endpoint
-      try {
-        const singleResponse = await this.getUserInvestments({ limit: 1 });
-        return singleResponse.items || [];
-      } catch {
-        return [];
-      }
+      // Return empty array instead of throwing
+      return [];
     }
   }
 
@@ -215,20 +237,50 @@ class InvestmentService {
   /**
    * Calculate days remaining for an investment
    */
-  calculateDaysRemaining(expiryDate: string | Date): number {
-    const expiry =
-      typeof expiryDate === "string" ? new Date(expiryDate) : expiryDate;
-    const now = new Date();
-    const daysRemaining = Math.ceil(
-      (expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-    );
-    return Math.max(0, daysRemaining);
+  calculateDaysRemaining(expiryDate: string | Date | any): number {
+    try {
+      let expiry: Date;
+      
+      // Handle Firestore Timestamp object with toDate method
+      if (expiryDate && typeof expiryDate === 'object' && typeof expiryDate.toDate === 'function') {
+        expiry = expiryDate.toDate();
+      }
+      // Handle Firestore Timestamp object with _seconds (raw format from API)
+      else if (expiryDate && typeof expiryDate === 'object' && '_seconds' in expiryDate) {
+        expiry = new Date(expiryDate._seconds * 1000);
+      }
+      // Handle string date
+      else if (typeof expiryDate === "string") {
+        expiry = new Date(expiryDate);
+      } 
+      // Handle Date object
+      else if (expiryDate instanceof Date) {
+        expiry = expiryDate;
+      } 
+      // Default fallback
+      else {
+        return 0;
+      }
+      
+      // Validate that we have a valid date
+      if (isNaN(expiry.getTime())) {
+        return 0;
+      }
+      
+      const now = new Date();
+      const daysRemaining = Math.ceil(
+        (expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+      );
+      return Math.max(0, daysRemaining);
+    } catch (error) {
+      return 0;
+    }
   }
 
   /**
    * Format investment data for UI display
    */
-  formatInvestmentForUI(investment: UserInvestment): UserInvestment {
+  formatInvestmentForUI = (investment: UserInvestment): UserInvestment => {
     const colorMapping: { [key: string]: string } = {
       base: "#3B82F6",
       bass: "#3B82F6",
@@ -350,13 +402,104 @@ class InvestmentService {
 
   /**
    * Get network data for a specific investment (level-wise breakdown)
-   * Actual endpoint: GET /api/investment/:id/network
+   * Note: Backend doesn't have /investment/:id/network endpoint
+   * Using /referrals/tree instead which provides network data
+   * @param investmentId - Investment ID (currently not used as backend returns all referrals)
    */
-  async getInvestmentNetwork(investmentId: string): Promise<any> {
-    const response = await apiCall<ApiResponse<any>>(
-      apiClient.get(`/investment/${investmentId}/network`)
-    );
-    return response.data!;
+  async getInvestmentNetwork(_investmentId: string): Promise<any> {
+    try {
+      // Use referrals/tree endpoint instead since investment/:id/network doesn't exist
+      const response = await apiCall<ApiResponse<any>>(
+        apiClient.get('/referrals/tree', { params: { levels: 15 } })
+      );
+      
+      const backendData = response.data || {};
+      const tree = backendData.tree || [];
+      
+      // Transform tree structure into level-wise breakdown
+      const levelsMap = new Map<number, any>();
+      
+      const processTreeNode = (node: any) => {
+        if (!node || !node.user) return;
+        
+        const level = node.level || 1;
+        
+        if (!levelsMap.has(level)) {
+          levelsMap.set(level, {
+            level,
+            totalMembers: 0,
+            activeMembers: 0,
+            members: [],
+            earnings: 0,
+          });
+        }
+        
+        const levelData = levelsMap.get(level)!;
+        levelData.totalMembers++;
+        
+        if (node.user.isActive || node.user.status === 'active') {
+          levelData.activeMembers++;
+        }
+        
+        levelData.members.push({
+          id: node.user.id,
+          username: node.user.username || 'Unknown',
+          firstName: node.user.firstName || '',
+          lastName: node.user.lastName || '',
+          email: node.user.email || '',
+          phoneNumber: node.user.phoneNumber || '',
+          joinedAt: node.user.createdAt || new Date(),
+          isActive: node.user.isActive || node.user.status === 'active',
+          referralCode: node.user.referralCode || '',
+          totalReferrals: node.referral?.totalReferrals || 0,
+          commissionEarned: node.referral?.commissionEarnings || 0,
+        });
+        
+        levelData.earnings += node.referral?.commissionEarnings || 0;
+        
+        // Process downline recursively
+        if (node.downline && Array.isArray(node.downline)) {
+          node.downline.forEach(processTreeNode);
+        }
+      };
+      
+      // Process all tree nodes
+      tree.forEach(processTreeNode);
+      
+      // Convert map to sorted array
+      const levels = Array.from(levelsMap.values()).sort((a, b) => a.level - b.level);
+      
+      const totalMembers = backendData.totalDownlineUsers || levels.reduce((sum, l) => sum + l.totalMembers, 0);
+      const activeMembers = levels.reduce((sum, l) => sum + l.activeMembers, 0);
+      const totalEarnings = levels.reduce((sum, l) => sum + l.earnings, 0);
+      
+      return {
+        investment: null, // Not provided by backend
+        levels,
+        summary: {
+          totalMembers,
+          activeMembers,
+          totalLevels: levels.length,
+          totalEarnings,
+          referralEarnings: totalEarnings,
+        },
+        tree, // Keep original tree structure
+      };
+    } catch (error) {
+      console.error('Error fetching network data:', error);
+      return { 
+        investment: null,
+        levels: [], 
+        summary: {
+          totalMembers: 0,
+          activeMembers: 0,
+          totalLevels: 0,
+          totalEarnings: 0,
+          referralEarnings: 0,
+        },
+        tree: [],
+      };
+    }
   }
 
   /**

@@ -36,7 +36,11 @@ export default function PlanDetails() {
 
     try {
       setLoading(true);
-      const data = await investmentService.getInvestmentById(investmentId);
+      
+      // Backend only has /my-investment endpoint, not /investment/:id
+      // Get user's investment and verify it matches the requested ID
+      const investments = await investmentService.getMyInvestments();
+      const data = investments.find(inv => inv.id === investmentId);
       
       if (!data) {
         toast.error('Investment not found');
@@ -77,11 +81,45 @@ export default function PlanDetails() {
     navigate(`/network?planId=${investmentId}`);
   };
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount?: number) => {
+    if (amount === undefined || amount === null) return '₹0';
     return `₹${amount.toLocaleString('en-IN')}`;
   };
 
-  const getFrequencyLabel = (freq: string) => {
+  const formatDate = (date: any): string => {
+    try {
+      let dateObj: Date;
+      
+      // Handle Firestore Timestamp with toDate method
+      if (date && typeof date === 'object' && typeof date.toDate === 'function') {
+        dateObj = date.toDate();
+      }
+      // Handle Firestore Timestamp with _seconds
+      else if (date && typeof date === 'object' && '_seconds' in date) {
+        dateObj = new Date(date._seconds * 1000);
+      }
+      // Handle string or Date object
+      else {
+        dateObj = new Date(date);
+      }
+      
+      // Validate date
+      if (isNaN(dateObj.getTime())) {
+        return 'Invalid Date';
+      }
+      
+      return dateObj.toLocaleDateString('en-IN', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch (error) {
+      return 'Invalid Date';
+    }
+  };
+
+  const getFrequencyLabel = (freq?: string) => {
+    if (!freq) return 'Monthly';
     return freq.charAt(0).toUpperCase() + freq.slice(1);
   };
 
@@ -137,7 +175,7 @@ export default function PlanDetails() {
               </div>
               <div className="text-right">
                 <p className="text-sm text-white/80">Ends On</p>
-                <p className="font-semibold">{new Date(investment.expiryDate).toLocaleDateString()}</p>
+                <p className="font-semibold">{formatDate(investment.expiryDate)}</p>
               </div>
             </div>
           </div>
@@ -284,21 +322,23 @@ export default function PlanDetails() {
               <span className="text-gray-600">Contribution Frequency</span>
               <span className="font-semibold text-gray-900">{getFrequencyLabel(investment.frequency)}</span>
             </div>
-            <div className="flex justify-between items-center py-3 border-b border-gray-100">
-              <span className="text-gray-600">Next Contribution Date</span>
-              <span className="font-semibold text-gray-900">
-                {new Date(investment.nextContributionDate).toLocaleDateString()}
-              </span>
-            </div>
+            {investment.nextContributionDate && (
+              <div className="flex justify-between items-center py-3 border-b border-gray-100">
+                <span className="text-gray-600">Next Contribution Date</span>
+                <span className="font-semibold text-gray-900">
+                  {formatDate(investment.nextContributionDate)}
+                </span>
+              </div>
+            )}
             <div className="flex justify-between items-center py-3 border-b border-gray-100">
               <span className="text-gray-600">Started On</span>
               <span className="font-semibold text-gray-900">
-                {new Date(investment.startDate).toLocaleDateString()}
+                {formatDate(investment.startDate)}
               </span>
             </div>
             <div className="flex justify-between items-center py-3">
               <span className="text-gray-600">Plan Validity</span>
-              <span className="font-semibold text-gray-900">{investment.planValidity} days</span>
+              <span className="font-semibold text-gray-900">{investment.validity || 0} days</span>
             </div>
           </div>
         </Card>
@@ -335,14 +375,14 @@ export default function PlanDetails() {
               <div className="flex justify-between items-center mb-2">
                 <span className="text-sm text-gray-600">Contribution Completion</span>
                 <span className="text-sm font-semibold text-gray-900">
-                  {investment.totalContributions}/{investment.planValidity}
+                  {investment.totalContributions}/{investment.validity || 0}
                 </span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
                 <div 
                   className="h-2 rounded-full transition-all"
                   style={{ 
-                    width: `${Math.min(100, ((investment.totalContributions || 0) / investment.planValidity) * 100)}%`,
+                    width: `${Math.min(100, ((investment.totalContributions || 0) / (investment.validity || 1)) * 100)}%`,
                     backgroundColor: investment.color || '#3B82F6'
                   }}
                 />
@@ -353,14 +393,14 @@ export default function PlanDetails() {
               <div className="flex justify-between items-center mb-2">
                 <span className="text-sm text-gray-600">Plan Progress</span>
                 <span className="text-sm font-semibold text-gray-900">
-                  {Math.max(0, investment.planValidity - (investment.daysRemaining || 0))} / {investment.planValidity} days
+                  {Math.max(0, (investment.validity || 0) - (investment.daysRemaining || 0))} / {investment.validity || 0} days
                 </span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
                 <div 
                   className="h-2 rounded-full bg-green-500 transition-all"
                   style={{ 
-                    width: `${Math.min(100, ((investment.planValidity - (investment.daysRemaining || 0)) / investment.planValidity) * 100)}%`
+                    width: `${Math.min(100, (((investment.validity || 0) - (investment.daysRemaining || 0)) / (investment.validity || 1)) * 100)}%`
                   }}
                 />
               </div>

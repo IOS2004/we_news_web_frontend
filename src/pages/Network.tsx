@@ -109,6 +109,9 @@ export default function Network() {
     try {
       setLoading(true);
       const data = await investmentService.getInvestmentNetwork(planId);
+      console.log('📊 Network data loaded:', data);
+      console.log('📊 Levels:', data?.levels);
+      console.log('📊 Summary:', data?.summary);
       setNetworkData(data);
     } catch (error) {
       console.error('Failed to load network data:', error);
@@ -145,7 +148,7 @@ export default function Network() {
     }
   };
 
-  const selectedLevelData = networkData?.levels.find(l => l.level === selectedLevel);
+  const selectedLevelData = networkData?.levels?.find(l => l.level === selectedLevel);
   const selectedInvestment = investments.find(inv => inv.id === selectedPlanId);
 
   if (loading) {
@@ -221,22 +224,22 @@ export default function Network() {
         }}
       >
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-bold">{networkData.investment.planName} Network</h2>
+          <h2 className="text-2xl font-bold">{networkData?.investment?.planName || selectedInvestment?.planName || 'My'} Network</h2>
           <div className="px-3 py-1 bg-white/20 rounded-full text-sm font-medium">
-            {networkData.investment.status}
+            {networkData?.investment?.status || 'Active'}
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="text-center">
-            <div className="text-3xl font-bold">{networkData.summary.totalMembers}</div>
+            <div className="text-3xl font-bold">{networkData?.summary?.totalMembers || 0}</div>
             <div className="text-white/80 text-sm mt-1">Total Network</div>
           </div>
           <div className="text-center">
-            <div className="text-3xl font-bold">{networkData.levels.length > 0 ? networkData.levels[0].totalMembers : 0}</div>
+            <div className="text-3xl font-bold">{networkData?.levels?.length > 0 ? networkData.levels[0].totalMembers : 0}</div>
             <div className="text-white/80 text-sm mt-1">Direct Referrals (Level 1)</div>
           </div>
           <div className="text-center">
-            <div className="text-3xl font-bold">{networkData.summary.activeMembers}</div>
+            <div className="text-3xl font-bold">{networkData?.summary?.activeMembers || 0}</div>
             <div className="text-white/80 text-sm mt-1">Active Members</div>
           </div>
         </div>
@@ -268,18 +271,18 @@ export default function Network() {
           <div className="space-y-4">
             <div>
               <div className="text-3xl font-bold text-green-600">
-                {formatCurrency(networkData.summary.referralEarnings)}
+                {formatCurrency(networkData?.summary?.referralEarnings || 0)}
               </div>
               <div className="text-sm text-muted-foreground mt-1">Referral Earnings</div>
             </div>
             <div>
               <div className="text-2xl font-bold text-blue-600">
-                {formatCurrency(networkData.summary.totalEarnings)}
+                {formatCurrency(networkData?.summary?.totalEarnings || 0)}
               </div>
               <div className="text-sm text-muted-foreground mt-1">Total Earnings (Plan)</div>
             </div>
             <div className="text-sm text-muted-foreground">
-              Active Levels: {networkData.summary.totalLevels}
+              Active Levels: {networkData?.summary?.totalLevels || 0}
             </div>
           </div>
         </Card>
@@ -308,16 +311,18 @@ export default function Network() {
         </Card>
       </div>
 
-      {/* API Integration Notice */}
-      {(!networkData.levels || networkData.levels.length === 0) && (
-        <Card className="mb-6 p-6 bg-yellow-50 border-yellow-200">
+      {/* No Referrals Notice */}
+      {(!networkData?.levels || networkData.levels.length === 0) && (
+        <Card className="mb-6 p-6 bg-blue-50 border-blue-200">
           <div className="flex items-start gap-3">
-            <div className="text-2xl">ℹ️</div>
+            <div className="text-2xl">👥</div>
             <div>
-              <h3 className="font-semibold mb-1">Network Levels Coming Soon</h3>
-              <p className="text-sm text-muted-foreground">
-                Detailed level-wise network breakdown and member listings will be available once the backend API integration is complete.
-                Currently showing aggregate network statistics for this plan.
+              <h3 className="font-semibold mb-1">Build Your Network</h3>
+              <p className="text-sm text-muted-foreground mb-3">
+                You haven't referred anyone yet. Share your referral link below to start building your network and earning commissions!
+              </p>
+              <p className="text-xs text-muted-foreground">
+                💡 Tip: Each person you refer becomes a Level 1 member in your network.
               </p>
             </div>
           </div>
