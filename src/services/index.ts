@@ -51,12 +51,7 @@ export type {
 
 // Trading Service
 export { default as tradingService } from "./tradingApi";
-export type {
-  TradingRound,
-  TradingOrder,
-  TradingSelection,
-  TradingStats,
-} from "./tradingApi";
+export type { ColorConfig } from "./tradingApi";
 
 // Dashboard Service
 export { default as dashboardService } from "./dashboardApi";

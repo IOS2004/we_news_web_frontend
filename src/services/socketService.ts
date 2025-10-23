@@ -90,11 +90,11 @@ class SocketService {
       this.reconnectAttempts = 0;
     });
 
-    this.socket.on("disconnect", (reason) => {
+    this.socket.on("disconnect", (reason: string) => {
       console.log("❌ Socket disconnected:", reason);
     });
 
-    this.socket.on("connect_error", (error) => {
+    this.socket.on("connect_error", (error: any) => {
       console.error("Socket connection error:", error.message);
       this.reconnectAttempts++;
 
@@ -103,7 +103,7 @@ class SocketService {
       }
     });
 
-    this.socket.on("error", (error) => {
+    this.socket.on("error", (error: any) => {
       console.error("Socket error:", error);
     });
   }
