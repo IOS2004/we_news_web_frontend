@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trading API Integration Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .test-section {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .test-section h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .test-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .test-info p {
+            margin: 5px 0;
+            color: #495057;
+        }
+        
+        .test-info code {
+            background: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            color: #d63384;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            margin: 5px;
+            transition: all 0.3s ease;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            overflow-x: auto;
+        }
+        
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        
+        .info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .input-group {
+            margin: 15px 0;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #495057;
+            font-weight: 600;
+        }
+
+        .input-group input,
+        .input-group select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .input-group input:focus,
+        .input-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Trading API Integration Test</h1>
+        
+        <!-- Authentication Section -->
+        <div class="test-section">
+            <h2>🔐 Step 1: Authentication</h2>
+            <div class="test-info">
+                <p><strong>Note:</strong> You need to login first to test trading APIs.</p>
+                <p>API: <code>POST /api/auth/login</code></p>
+            </div>
+            
+            <div class="grid">
+                <div class="input-group">
+                    <label>Email:</label>
+                    <input type="email" id="email" value="test@example.com" placeholder="Enter email">
+                </div>
+                <div class="input-group">
+                    <label>Password:</label>
+                    <input type="password" id="password" value="password123" placeholder="Enter password">
+                </div>
+            </div>
+            
+            <button onclick="testLogin()">Login</button>
+            <div id="loginResult"></div>
+        </div>
+
+        <!-- Get Active Rounds -->
+        <div class="test-section">
+            <h2>📋 Step 2: Get Active Rounds</h2>
+            <div class="test-info">
+                <p><strong>What you should see:</strong> List of active trading rounds with their details</p>
+                <p>API: <code>GET /api/trading/active-rounds?roundType=colour</code></p>
+            </div>
+            
+            <div class="input-group">
+                <label>Round Type:</label>
+                <select id="roundType">
+                    <option value="">All Types</option>
+                    <option value="colour">Colour</option>
+                    <option value="number">Number</option>
+                </select>
+            </div>
+            
+            <button onclick="testGetActiveRounds()" id="btnActiveRounds">Get Active Rounds</button>
+            <div id="activeRoundsResult"></div>
+        </div>
+
+        <!-- Get Wallet Balance -->
+        <div class="test-section">
+            <h2>💰 Step 3: Check Wallet Balance</h2>
+            <div class="test-info">
+                <p><strong>What you should see:</strong> Your current wallet balance</p>
+                <p>API: <code>GET /api/trading/wallet-balance</code></p>
+            </div>
+            
+            <button onclick="testGetWalletBalance()" id="btnWallet">Get Wallet Balance</button>
+            <div id="walletResult"></div>
+        </div>
+
+        <!-- Place Trade -->
+        <div class="test-section">
+            <h2>🎮 Step 4: Place a Trade</h2>
+            <div class="test-info">
+                <p><strong>What you should see:</strong> Trade confirmation with transaction details</p>
+                <p>API: <code>POST /api/trading/place-trade</code></p>
+                <p><strong>Note:</strong> This will deduct from your wallet!</p>
+            </div>
+            
+            <div class="grid">
+                <div class="input-group">
+                    <label>Round ID:</label>
+                    <input type="text" id="tradeRoundId" placeholder="Enter round ID">
+                </div>
+                <div class="input-group">
+                    <label>Trade Type:</label>
+                    <select id="tradeType">
+                        <option value="colour">Colour</option>
+                        <option value="number">Number</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="grid">
+                <div class="input-group">
+                    <label>Selection (colour name or number):</label>
+                    <input type="text" id="selection" placeholder="e.g., red or 42" value="red">
+                </div>
+                <div class="input-group">
+                    <label>Amount:</label>
+                    <input type="number" id="amount" placeholder="Enter amount" value="100" min="1">
+                </div>
+            </div>
+            
+            <button onclick="testPlaceTrade()" id="btnTrade">Place Trade</button>
+            <div id="tradeResult"></div>
+        </div>
+
+        <!-- Get My Trades -->
+        <div class="test-section">
+            <h2>📊 Step 5: View My Trades</h2>
+            <div class="test-info">
+                <p><strong>What you should see:</strong> Your trading history</p>
+                <p>API: <code>GET /api/trading/my-trades</code></p>
+            </div>
+            
+            <button onclick="testGetMyTrades()" id="btnMyTrades">Get My Trades</button>
+            <div id="myTradesResult"></div>
+        </div>
+
+        <!-- Check Winnings -->
+        <div class="test-section">
+            <h2>🏆 Step 6: Check Winnings</h2>
+            <div class="test-info">
+                <p><strong>What you should see:</strong> Winning information for completed rounds</p>
+                <p>API: <code>GET /api/trading/rounds/:roundId/check-winnings</code></p>
+            </div>
+            
+            <div class="input-group">
+                <label>Round ID:</label>
+                <input type="text" id="winningsRoundId" placeholder="Enter completed round ID">
+            </div>
+            
+            <button onclick="testCheckWinnings()" id="btnWinnings">Check Winnings</button>
+            <div id="winningsResult"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:5000/api';
+        let authToken = localStorage.getItem('authToken') || '';
+
+        // Set token if already logged in
+        if (authToken) {
+            showResult('loginResult', 'Already logged in!', 'success');
+        }
+
+        // Helper: Show result
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.className = `result ${type}`;
+            element.textContent = typeof message === 'object' ? JSON.stringify(message, null, 2) : message;
+        }
+
+        // Helper: Show loading
+        function showLoading(buttonId) {
+            const btn = document.getElementById(buttonId);
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = btn.textContent + ' <span class="loading"></span>';
+            }
+        }
+
+        // Helper: Hide loading
+        function hideLoading(buttonId, originalText) {
+            const btn = document.getElementById(buttonId);
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        }
+
+        // Test 1: Login
+        async function testLogin() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            if (!email || !password) {
+                showResult('loginResult', 'Please enter email and password', 'error');
+                return;
+            }
+
+            showLoading('btnLogin');
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.data && data.data.token) {
+                    authToken = data.data.token;
+                    localStorage.setItem('authToken', authToken);
+                    showResult('loginResult', `✅ Login successful!\n\nToken: ${authToken.substring(0, 30)}...\n\nUser: ${data.data.user.email}`, 'success');
+                } else {
+                    showResult('loginResult', `❌ Login failed: ${data.message}`, 'error');
+                }
+            } catch (error) {
+                showResult('loginResult', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Test 2: Get Active Rounds
+        async function testGetActiveRounds() {
+            if (!authToken) {
+                showResult('activeRoundsResult', '❌ Please login first', 'error');
+                return;
+            }
+
+            const roundType = document.getElementById('roundType').value;
+            const url = roundType ? 
+                `${API_BASE_URL}/trading/active-rounds?roundType=${roundType}` : 
+                `${API_BASE_URL}/trading/active-rounds`;
+
+            try {
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    const rounds = data.data;
+                    if (rounds && rounds.length > 0) {
+                        let message = `✅ Found ${rounds.length} active round(s):\n\n`;
+                        rounds.forEach((round, index) => {
+                            message += `Round ${index + 1}:\n`;
+                            message += `  ID: ${round.id}\n`;
+                            message += `  Round ID: ${round.roundId}\n`;
+                            message += `  Number: ${round.roundNumber}\n`;
+                            message += `  Type: ${round.roundType}\n`;
+                            message += `  Status: ${round.status}\n`;
+                            message += `  Total Trades: ${round.totalTrades || 0}\n`;
+                            message += `\n`;
+                        });
+                        showResult('activeRoundsResult', message, 'success');
+                        
+                        // Auto-fill first round ID for trading
+                        if (rounds[0]) {
+                            document.getElementById('tradeRoundId').value = rounds[0].id;
+                        }
+                    } else {
+                        showResult('activeRoundsResult', '⚠️ No active rounds found', 'info');
+                    }
+                } else {
+                    showResult('activeRoundsResult', `❌ ${data.message}`, 'error');
+                }
+            } catch (error) {
+                showResult('activeRoundsResult', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Test 3: Get Wallet Balance
+        async function testGetWalletBalance() {
+            if (!authToken) {
+                showResult('walletResult', '❌ Please login first', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/trading/wallet-balance`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    const wallet = data.data;
+                    let message = `✅ Wallet Balance:\n\n`;
+                    message += `  Balance: ₹${wallet.balance}\n`;
+                    message += `  Formatted: ${wallet.formattedBalance}\n`;
+                    message += `  Status: ${wallet.status}\n`;
+                    message += `  Can Trade: ${wallet.canTrade ? 'Yes' : 'No'}\n`;
+                    showResult('walletResult', message, 'success');
+                } else {
+                    showResult('walletResult', `❌ ${data.message}`, 'error');
+                }
+            } catch (error) {
+                showResult('walletResult', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Test 4: Place Trade
+        async function testPlaceTrade() {
+            if (!authToken) {
+                showResult('tradeResult', '❌ Please login first', 'error');
+                return;
+            }
+
+            const roundId = document.getElementById('tradeRoundId').value;
+            const tradeType = document.getElementById('tradeType').value;
+            const selection = document.getElementById('selection').value;
+            const amount = parseFloat(document.getElementById('amount').value);
+
+            if (!roundId || !selection || !amount) {
+                showResult('tradeResult', '❌ Please fill all fields', 'error');
+                return;
+            }
+
+            const requestBody = {
+                roundId,
+                tradeType,
+                selection,
+                amount
+            };
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/trading/place-trade`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    const trade = data.data.trade;
+                    const transaction = data.data.transaction;
+                    let message = `✅ Trade placed successfully!\n\n`;
+                    message += `Trade Details:\n`;
+                    message += `  Trade ID: ${trade.tradeId}\n`;
+                    message += `  Selection: ${trade.selection}\n`;
+                    message += `  Amount: ₹${trade.amount}\n`;
+                    message += `\nTransaction:\n`;
+                    message += `  Previous Balance: ₹${transaction.previousBalance}\n`;
+                    message += `  New Balance: ₹${transaction.newBalance}\n`;
+                    showResult('tradeResult', message, 'success');
+                } else {
+                    showResult('tradeResult', `❌ ${data.message}`, 'error');
+                }
+            } catch (error) {
+                showResult('tradeResult', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Test 5: Get My Trades
+        async function testGetMyTrades() {
+            if (!authToken) {
+                showResult('myTradesResult', '❌ Please login first', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/trading/my-trades`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    const trades = data.data;
+                    if (trades && trades.length > 0) {
+                        let message = `✅ Found ${trades.length} round(s) with trades:\n\n`;
+                        trades.forEach((userTrade, index) => {
+                            message += `Round ${index + 1}:\n`;
+                            message += `  Round ID: ${userTrade.roundId}\n`;
+                            message += `  Total Amount: ₹${userTrade.totalAmount}\n`;
+                            message += `  Color Amount: ₹${userTrade.totalColorAmount}\n`;
+                            message += `  Number Amount: ₹${userTrade.totalNumberAmount}\n`;
+                            message += `  Status: ${userTrade.status}\n`;
+                            if (userTrade.result) {
+                                message += `  Result: ${userTrade.result}\n`;
+                            }
+                            message += `\n`;
+                        });
+                        showResult('myTradesResult', message, 'success');
+                    } else {
+                        showResult('myTradesResult', '⚠️ No trades found', 'info');
+                    }
+                } else {
+                    showResult('myTradesResult', `❌ ${data.message}`, 'error');
+                }
+            } catch (error) {
+                showResult('myTradesResult', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Test 6: Check Winnings
+        async function testCheckWinnings() {
+            if (!authToken) {
+                showResult('winningsResult', '❌ Please login first', 'error');
+                return;
+            }
+
+            const roundId = document.getElementById('winningsRoundId').value;
+
+            if (!roundId) {
+                showResult('winningsResult', '❌ Please enter a round ID', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/trading/rounds/${roundId}/check-winnings`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    const winnings = data.data;
+                    let message = `✅ Winnings Check:\n\n`;
+                    message += `  Has Won: ${winnings.hasWon ? 'Yes! 🎉' : 'No'}\n`;
+                    message += `  Total Amount: ₹${winnings.totalAmount}\n`;
+                    message += `  Result: ${winnings.result}\n`;
+                    message += `  Current Balance: ₹${winnings.walletBalance}\n`;
+                    
+                    if (winnings.winnings && winnings.winnings.length > 0) {
+                        message += `\nWinning Trades:\n`;
+                        winnings.winnings.forEach((win, index) => {
+                            message += `  ${index + 1}. Selection: ${win.selection}, Amount: ₹${win.amount}\n`;
+                        });
+                    }
+                    
+                    showResult('winningsResult', message, winnings.hasWon ? 'success' : 'info');
+                } else {
+                    showResult('winningsResult', `❌ ${data.message}`, 'error');
+                }
+            } catch (error) {
+                showResult('winningsResult', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+    </script>
+</body>
+</html>

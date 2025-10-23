@@ -6,7 +6,9 @@ import toast from 'react-hot-toast';
 import { useCart } from '@/hooks/useCart';
 import { CartSummaryBar } from '@/components/trading/CartSummaryBar';
 import { CartDrawer } from '@/components/trading/CartDrawer';
-import { ShoppingCart } from 'lucide-react';
+import { RoundsList } from '@/components/trading/RoundsList';
+import { ShoppingCart, RefreshCw } from 'lucide-react';
+import { tradingService } from '@/services/tradingApi';
 
 // Types
 interface Plan {
@@ -22,26 +24,7 @@ interface Color {
   textColor: string;
 }
 
-interface Bet {
-  id: string;
-  colorId: string;
-  amount: number;
-  timestamp: number;
-}
-
-interface GameRound {
-  id: string;
-  startTime: number;
-  endTime: number;
-  bettingEndTime: number;
-  winningColor?: string;
-  status: 'betting' | 'drawing' | 'finished';
-}
-
 // Constants
-const ROUND_DURATION = 3 * 60 * 1000; // 3 minutes
-const BETTING_DURATION = 2.5 * 60 * 1000; // 2.5 minutes (betting closes 30 sec before round ends)
-
 const plans: Plan[] = [
   { id: '1', amount: 10, label: '₹10' },
   { id: '2', amount: 20, label: '₹20' },
@@ -69,108 +52,54 @@ export default function Trading() {
   const { cart, addItem, removeItem, clearCart, validateCartBalance } = useCart();
   const [selectedPlan, setSelectedPlan] = useState<Plan>(plans[0]);
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
-  const [currentRound, setCurrentRound] = useState<GameRound | null>(null);
-  const [timeLeft, setTimeLeft] = useState(0);
-  const [bets, setBets] = useState<Bet[]>([]);
-  const [gameHistory, setGameHistory] = useState<GameRound[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Backend rounds state
+  const [upcomingRounds, setUpcomingRounds] = useState<any[]>([]);
+  const [activeRounds, setActiveRounds] = useState<any[]>([]);
+  const [selectedRoundId, setSelectedRoundId] = useState<string | null>(null);
+  const [isLoadingRounds, setIsLoadingRounds] = useState(false);
 
-  // Initialize a new round (wrapped in useCallback to prevent infinite loops)
-  const initializeRound = useCallback(() => {
-    const now = Date.now();
-    const newRound: GameRound = {
-      id: `round-${now}`,
-      startTime: now,
-      endTime: now + ROUND_DURATION,
-      bettingEndTime: now + BETTING_DURATION,
-      status: 'betting',
-    };
-    setCurrentRound(newRound);
-    setTimeLeft(ROUND_DURATION);
-    setBets([]);
-    setSelectedColors([]);
-  }, []);
+  // Fetch rounds from backend
+  const fetchRounds = useCallback(async () => {
+    setIsLoadingRounds(true);
+    try {
+      const [upcoming, active] = await Promise.all([
+        tradingService.getUpcomingRounds('colour', 10),
+        tradingService.getActiveRounds('colour')
+      ]);
+      
+      setUpcomingRounds(upcoming);
+      setActiveRounds(active);
+      
+      // Auto-select first active round if none selected
+      if (!selectedRoundId && active.length > 0) {
+        setSelectedRoundId(active[0].id);
+      }
+    } catch (error) {
+      console.error('Failed to fetch rounds:', error);
+      toast.error('Failed to load trading rounds');
+    } finally {
+      setIsLoadingRounds(false);
+    }
+  }, [selectedRoundId]);
 
-  // Initialize game round on mount
+  // Initialize on mount
   useEffect(() => {
     document.title = 'Color Trading - WeNews';
-    initializeRound();
+    fetchRounds();
     
     // Load wallet data separately when needed
     refreshWallet().catch(err => {
       console.error('Failed to load wallet:', err);
     });
-  }, [initializeRound, refreshWallet]);
-
-  // Draw winner and calculate results (wrapped in useCallback)
-  const drawWinner = useCallback(() => {
-    if (!currentRound) return;
-
-    // Select random winning color
-    const winningColor = colors[Math.floor(Math.random() * colors.length)];
-    
-    const finishedRound: GameRound = {
-      ...currentRound,
-      status: 'finished',
-      winningColor: winningColor.id,
-    };
-    
-    setCurrentRound(finishedRound);
-    
-    // Calculate winnings
-    const winningBets = bets.filter(bet => bet.colorId === winningColor.id);
-    const totalWinnings = winningBets.reduce((sum, bet) => sum + (bet.amount * 2), 0);
-    
-    if (totalWinnings > 0) {
-      toast.success(`🎉 You won ${formatCurrency(totalWinnings)}! Winning color: ${winningColor.name}`, {
-        duration: 5000,
-      });
-      refreshWallet();
-    } else if (bets.length > 0) {
-      toast.error(`Better luck next time! Winning color was ${winningColor.name}`, {
-        duration: 4000,
-      });
-    }
-
-    // Add to history
-    setGameHistory(prev => [finishedRound, ...prev.slice(0, 9)]);
-
-    // Start new round after 5 seconds
-    setTimeout(() => {
-      initializeRound();
-    }, 5000);
-  }, [currentRound, bets, refreshWallet, initializeRound]);
-
-  // Timer countdown
-  useEffect(() => {
-    if (!currentRound) return;
-
-    const interval = setInterval(() => {
-      const now = Date.now();
-      const remaining = currentRound.endTime - now;
-
-      if (remaining <= 0) {
-        // Round finished - draw winner
-        if (currentRound.status !== 'finished') {
-          drawWinner();
-        }
-      } else if (now >= currentRound.bettingEndTime && currentRound.status === 'betting') {
-        // Betting closed - waiting for result
-        setCurrentRound(prev => prev ? { ...prev, status: 'drawing' } : null);
-        setTimeLeft(remaining);
-      } else {
-        setTimeLeft(remaining);
-      }
-    }, 100);
-
-    return () => clearInterval(interval);
-  }, [currentRound?.id, currentRound?.endTime, currentRound?.bettingEndTime, currentRound?.status, drawWinner]);
+  }, [refreshWallet, fetchRounds]);
 
   // Toggle color selection
   const toggleColor = (colorId: string) => {
-    if (currentRound?.status !== 'betting') {
-      toast.error('Betting is closed!');
+    if (!selectedRoundId) {
+      toast.error('Please select a round first!');
       return;
     }
 
@@ -185,8 +114,9 @@ export default function Trading() {
 
   // Add to cart
   const addToCart = () => {
-    if (!currentRound || currentRound.status !== 'betting') {
-      toast.error('Betting is closed!');
+    // Check if a round is selected
+    if (!selectedRoundId) {
+      toast.error('Please select a round first!');
       return;
     }
 
@@ -199,7 +129,7 @@ export default function Trading() {
     
     // Add each color as a separate order or as a single combined order
     const result = addItem({
-      roundId: currentRound.id,
+      roundId: selectedRoundId, // Use selected backend round ID
       gameType: 'color',
       options: [...selectedColors], // Copy the array
       amount: totalBetAmount,
@@ -215,8 +145,8 @@ export default function Trading() {
 
   // Submit all cart orders
   const submitCartOrders = async () => {
-    if (!currentRound) {
-      toast.error('No active round!');
+    if (!selectedRoundId) {
+      toast.error('No round selected!');
       return;
     }
 
@@ -230,53 +160,42 @@ export default function Trading() {
     setIsSubmitting(true);
     
     try {
-      // In this simulation, we'll just move cart items to bets
-      // In real app, this would call the batch API endpoint
-      
-      const cartBets: Bet[] = cart.items.map(item => ({
-        id: `bet-${Date.now()}-${Math.random()}`,
-        colorId: item.options[0], // For now, use first color
-        amount: item.amount,
-        timestamp: Date.now(),
-      }));
+      // Place each trade via the backend API
+      const tradePromises = cart.items.flatMap(item => 
+        item.options.map(color => 
+          tradingService.placeTrade(
+            selectedRoundId,
+            'colour',
+            color as any,
+            selectedPlan.amount
+          )
+        )
+      );
 
-      setBets(prev => [...prev, ...cartBets]);
-      
-      toast.success(`Successfully placed ${cart.items.length} orders for ${formatCurrency(cart.finalAmount)}!`, {
-        duration: 4000,
-      });
-      
-      clearCart();
-      setIsCartOpen(false);
-      
-      // Refresh wallet to show updated balance
-      setTimeout(() => refreshWallet(), 500);
+      const results = await Promise.all(tradePromises);
+      const successCount = results.filter(r => r !== null).length;
+
+      if (successCount > 0) {
+        toast.success(`Successfully placed ${successCount} trade${successCount > 1 ? 's' : ''} for ${formatCurrency(cart.finalAmount)}!`, {
+          duration: 4000,
+        });
+        
+        clearCart();
+        setIsCartOpen(false);
+        
+        // Refresh wallet and rounds to show updated balance and trade counts
+        await Promise.all([
+          refreshWallet(),
+          fetchRounds()
+        ]);
+      } else {
+        toast.error('Failed to place any trades');
+      }
     } catch (error) {
       console.error('Failed to submit orders:', error);
       toast.error('Failed to place orders. Please try again.');
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  // Format time remaining
-  const formatTime = (ms: number) => {
-    const totalSeconds = Math.ceil(ms / 1000);
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  };
-
-  // Get status message
-  const getStatusMessage = () => {
-    if (!currentRound) return 'Loading...';
-    
-    if (currentRound.status === 'betting') {
-      return `Betting Open - ${formatTime(timeLeft)} remaining`;
-    } else if (currentRound.status === 'drawing') {
-      return `Drawing Winner - ${formatTime(timeLeft)} remaining`;
-    } else {
-      return 'Round Finished - Next round starting...';
     }
   };
 
@@ -288,8 +207,16 @@ export default function Trading() {
   return (
     <div className="p-6 max-w-7xl mx-auto pb-6">
       <div className="mb-6">
-        <div className="mb-4">
+        <div className="mb-4 flex items-center justify-between">
           <h1 className="text-3xl font-bold text-foreground">Color Trading Game</h1>
+          <button
+            onClick={fetchRounds}
+            disabled={isLoadingRounds}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          >
+            <RefreshCw size={18} className={isLoadingRounds ? 'animate-spin' : ''} />
+            Refresh Rounds
+          </button>
         </div>
         <p className="text-muted-foreground text-lg">
           Select colors and place your bets. Win 2x your bet amount!
@@ -302,21 +229,41 @@ export default function Trading() {
         <div className="text-3xl font-bold">{formatCurrency(wallet?.balance || 0)}</div>
       </Card>
 
-      {/* Game Status */}
-      <Card className="mb-6 p-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-sm opacity-90">Round Status</div>
-            <div className="text-xl font-bold">{getStatusMessage()}</div>
-          </div>
-          {currentRound && (
-            <div className="text-right">
-              <div className="text-sm opacity-90">Round ID</div>
-              <div className="text-xs font-mono">#{currentRound.id.slice(-8)}</div>
+      {/* Selected Round Info - Only show when a round is selected */}
+      {selectedRoundId && (() => {
+        const selectedRound = [...activeRounds, ...upcomingRounds].find(r => r.id === selectedRoundId);
+        if (!selectedRound) return null;
+        
+        return (
+          <Card className="mb-6 p-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm opacity-90">Selected Round</div>
+                <div className="text-xl font-bold">Round #{selectedRound.roundNumber}</div>
+              </div>
+              <div className="text-right">
+                <div className="text-sm opacity-90">Round ID</div>
+                <div className="text-xs font-mono">#{selectedRound.roundId?.slice(-8) || selectedRound.id.slice(-8)}</div>
+              </div>
             </div>
-          )}
-        </div>
-      </Card>
+          </Card>
+        );
+      })()}
+
+      {/* Important Info Banner */}
+      {!selectedRoundId && (
+        <Card className="mb-6 p-4 bg-orange-50 border-2 border-orange-200">
+          <div className="flex items-start gap-3">
+            <div className="text-2xl">⚠️</div>
+            <div className="flex-1">
+              <h3 className="font-bold text-orange-900 mb-1">Please Select a Round</h3>
+              <p className="text-sm text-orange-700">
+                Select an active round from the list below to start trading. Service charge: <strong>10% (minimum ₹5)</strong>
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
 
       {/* Cart Status Banner */}
       {cart.totalItems > 0 && (
@@ -331,11 +278,38 @@ export default function Trading() {
             </div>
             <div className="text-right">
               <div className="text-2xl font-black">₹{cart.finalAmount}</div>
-              <div className="text-sm opacity-90">Total (incl. 10% service charge)</div>
+              <div className="text-sm opacity-90">Total (incl. service charge: ₹{cart.serviceCharge})</div>
             </div>
           </div>
         </Card>
       )}
+
+      {/* Trading Rounds Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        {/* Active Rounds */}
+        <RoundsList
+          rounds={activeRounds}
+          selectedRoundId={selectedRoundId}
+          onSelectRound={(roundId) => {
+            setSelectedRoundId(roundId);
+            toast.success('Round selected for trading');
+          }}
+          title="🟢 Active Rounds"
+          emptyMessage="No active rounds available. Check upcoming rounds."
+        />
+
+        {/* Upcoming Rounds */}
+        <RoundsList
+          rounds={upcomingRounds}
+          selectedRoundId={selectedRoundId}
+          onSelectRound={(roundId) => {
+            setSelectedRoundId(roundId);
+            toast.success('Round selected for trading');
+          }}
+          title="⏳ Upcoming Rounds"
+          emptyMessage="No upcoming rounds scheduled."
+        />
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Game Area */}
@@ -346,19 +320,17 @@ export default function Trading() {
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
               {colors.map(color => {
                 const isSelected = selectedColors.includes(color.id);
-                const isWinning = currentRound?.winningColor === color.id && currentRound.status === 'finished';
                 
                 return (
                   <button
                     key={color.id}
                     onClick={() => toggleColor(color.id)}
-                    disabled={currentRound?.status !== 'betting'}
+                    disabled={!selectedRoundId}
                     className={`
                       relative aspect-square rounded-lg font-semibold text-sm
                       transition-all duration-200 transform
-                      ${currentRound?.status === 'betting' ? 'hover:scale-105 cursor-pointer' : 'cursor-not-allowed opacity-60'}
+                      ${selectedRoundId ? 'hover:scale-105 cursor-pointer' : 'cursor-not-allowed opacity-60'}
                       ${isSelected ? 'ring-4 ring-yellow-400 scale-105' : ''}
-                      ${isWinning ? 'ring-4 ring-green-400 animate-pulse' : ''}
                       disabled:cursor-not-allowed
                     `}
                     style={{ 
@@ -370,11 +342,6 @@ export default function Trading() {
                     {isSelected && (
                       <div className="absolute -top-2 -right-2 bg-yellow-400 text-black rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
                         ✓
-                      </div>
-                    )}
-                    {isWinning && (
-                      <div className="absolute -top-2 -right-2 bg-green-400 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs">
-                        🏆
                       </div>
                     )}
                   </button>
@@ -426,138 +393,14 @@ export default function Trading() {
               </div>
               <button 
                 onClick={addToCart}
-                disabled={currentRound?.status !== 'betting'}
+                disabled={!selectedRoundId || selectedColors.length === 0}
                 className="w-full bg-white text-orange-600 hover:bg-orange-50 hover:text-orange-700 font-bold text-lg py-4 px-6 rounded-xl flex items-center justify-center gap-3 shadow-lg border-2 border-orange-200 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105"
               >
                 <ShoppingCart size={22} />
-                {currentRound?.status === 'betting' ? 'Add to Cart' : 'Betting Closed'}
+                {selectedRoundId ? 'Add to Cart' : 'Select a Round First'}
               </button>
             </Card>
           )}
-
-          {/* Current Bets */}
-          {bets.length > 0 && (
-            <Card className="p-6">
-              <h2 className="text-xl font-semibold mb-4">Your Bets This Round</h2>
-              <div className="space-y-2">
-                {bets.map(bet => {
-                  const color = colors.find(c => c.id === bet.colorId);
-                  const isWinning = currentRound?.winningColor === bet.colorId && currentRound.status === 'finished';
-                  
-                  return (
-                    <div 
-                      key={bet.id}
-                      className={`
-                        flex items-center justify-between p-3 rounded-lg
-                        ${isWinning ? 'bg-green-100 border-2 border-green-500' : 'bg-muted'}
-                      `}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div 
-                          className="w-8 h-8 rounded"
-                          style={{ backgroundColor: color?.color }}
-                        />
-                        <span className="font-semibold">{color?.name}</span>
-                        {isWinning && <span className="text-green-600 font-bold">🏆 Winner!</span>}
-                      </div>
-                      <div className="text-right">
-                        <div className="font-bold">{formatCurrency(bet.amount)}</div>
-                        {isWinning && (
-                          <div className="text-sm text-green-600 font-semibold">
-                            Win: {formatCurrency(bet.amount * 2)}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="mt-4 pt-4 border-t border-border">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Total Bet:</span>
-                  <span className="font-bold">{formatCurrency(bets.reduce((sum, b) => sum + b.amount, 0))}</span>
-                </div>
-                {currentRound?.status === 'finished' && (
-                  <div className="flex justify-between text-sm mt-1">
-                    <span className="text-muted-foreground">Total Winnings:</span>
-                    <span className="font-bold text-green-600">
-                      {formatCurrency(bets.filter(b => b.colorId === currentRound.winningColor).reduce((sum, b) => sum + (b.amount * 2), 0))}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </Card>
-          )}
-        </div>
-
-        {/* Sidebar - Game History */}
-        <div className="lg:col-span-1">
-          <Card className="p-6">
-            <h2 className="text-xl font-semibold mb-4">Game History</h2>
-            {gameHistory.length === 0 ? (
-              <p className="text-muted-foreground text-sm text-center py-8">
-                No history yet. Start playing!
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {gameHistory.map((round, index) => {
-                  const winningColor = colors.find(c => c.id === round.winningColor);
-                  
-                  return (
-                    <div 
-                      key={round.id}
-                      className="p-3 rounded-lg bg-muted border border-border"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs text-muted-foreground">
-                          Round #{gameHistory.length - index}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(round.startTime).toLocaleTimeString()}
-                        </span>
-                      </div>
-                      {winningColor && (
-                        <div className="flex items-center gap-2">
-                          <div 
-                            className="w-6 h-6 rounded"
-                            style={{ backgroundColor: winningColor.color }}
-                          />
-                          <span className="font-semibold text-sm">{winningColor.name}</span>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </Card>
-
-          {/* Game Rules */}
-          <Card className="p-6 mt-6">
-            <h2 className="text-xl font-semibold mb-4">How to Play</h2>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li className="flex items-start gap-2">
-                <span className="text-green-500 font-bold">1.</span>
-                <span>Select one or more colors you think will win</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-green-500 font-bold">2.</span>
-                <span>Choose your bet amount (₹10, ₹20, ₹50, or ₹100)</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-green-500 font-bold">3.</span>
-                <span>Place your bet before the 2.5 minute mark</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-green-500 font-bold">4.</span>
-                <span>Wait for the result - win 2x your bet!</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-green-500 font-bold">⏱️</span>
-                <span>Each round lasts 3 minutes</span>
-              </li>
-            </ul>
-          </Card>
         </div>
       </div>
 

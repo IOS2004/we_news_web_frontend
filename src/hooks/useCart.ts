@@ -23,6 +23,7 @@ export interface Cart {
 const CART_STORAGE_KEY = "wenews_trading_cart";
 const MAX_CART_ITEMS = 20;
 const SERVICE_CHARGE_PERCENTAGE = 0.1; // 10%
+const MIN_SERVICE_CHARGE = 5; // Minimum service charge is ₹5
 
 // Generate unique cart item ID
 const generateCartItemId = (): string => {
@@ -34,9 +35,11 @@ const calculateTotalAmount = (items: CartItem[]): number => {
   return items.reduce((total, item) => total + item.amount, 0);
 };
 
-// Calculate service charge (10% of total amount)
+// Calculate service charge (10% of total amount with floor of ₹5)
 const calculateServiceCharge = (totalAmount: number): number => {
-  return Math.round(totalAmount * SERVICE_CHARGE_PERCENTAGE * 100) / 100;
+  if (totalAmount === 0) return 0;
+  const charge = Math.round(totalAmount * SERVICE_CHARGE_PERCENTAGE * 100) / 100;
+  return Math.max(charge, MIN_SERVICE_CHARGE); // Minimum ₹5 service charge
 };
 
 // Calculate final amount (total + service charge)

@@ -196,7 +196,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   <span className="font-semibold text-gray-800">₹{cart.totalAmount}</span>
                 </div>
                 <div className="flex justify-between items-center text-sm">
-                  <span className="text-gray-600">Service Charge (10%):</span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-gray-600">Service Charge (10%):</span>
+                    <span className="text-xs text-gray-500">(min ₹5)</span>
+                  </div>
                   <span className="font-semibold text-orange-600">₹{cart.serviceCharge}</span>
                 </div>
                 <div className="border-t border-gray-200 pt-2">
