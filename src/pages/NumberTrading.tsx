@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useWallet } from '@/contexts/WalletContext';
+import { useRounds } from '@/contexts/RoundsContext';
 import Card from '@/components/common/Card';
 import { formatCurrency } from '@/utils/helpers';
 import toast from 'react-hot-toast';
@@ -31,51 +32,32 @@ const numbers = Array.from({ length: 101 }, (_, i) => i);
 export default function NumberTrading() {
   const { wallet, refreshWallet } = useWallet();
   const { cart, addItem, removeItem, clearCart, validateCartBalance } = useCart();
+  
+  // Use rounds context instead of local state
+  const {
+    numberActiveRounds: activeRounds,
+    numberUpcomingRounds: upcomingRounds,
+    selectedNumberRoundId: selectedRoundId,
+    setSelectedNumberRoundId: setSelectedRoundId,
+    isLoadingNumberRounds: isLoadingRounds,
+    fetchNumberRounds,
+  } = useRounds();
+  
   const [selectedPlan, setSelectedPlan] = useState<Plan>(plans[0]);
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  // Backend rounds state
-  const [upcomingRounds, setUpcomingRounds] = useState<any[]>([]);
-  const [activeRounds, setActiveRounds] = useState<any[]>([]);
-  const [selectedRoundId, setSelectedRoundId] = useState<string | null>(null);
-  const [isLoadingRounds, setIsLoadingRounds] = useState(false);
 
-  // Fetch rounds from backend
-  const fetchRounds = useCallback(async () => {
-    setIsLoadingRounds(true);
-    try {
-      const [upcoming, active] = await Promise.all([
-        tradingService.getUpcomingRounds('number', 10),
-        tradingService.getActiveRounds('number')
-      ]);
-      
-      setUpcomingRounds(upcoming);
-      setActiveRounds(active);
-      
-      // Auto-select first active round if none selected
-      if (!selectedRoundId && active.length > 0) {
-        setSelectedRoundId(active[0].id);
-      }
-    } catch (error) {
-      console.error('Failed to fetch rounds:', error);
-      toast.error('Failed to load trading rounds');
-    } finally {
-      setIsLoadingRounds(false);
-    }
-  }, [selectedRoundId]);
-
-  // Initialize on mount
+  // Initialize on mount - fetch rounds only if not already loaded
   useEffect(() => {
     document.title = 'Number Trading - WeNews';
-    fetchRounds();
+    fetchNumberRounds(); // Will use cache if data is fresh
     
     // Load wallet data separately when needed
     refreshWallet().catch(err => {
       console.error('Failed to load wallet:', err);
     });
-  }, [refreshWallet, fetchRounds]);
+  }, [refreshWallet, fetchNumberRounds]);
 
   // Toggle number selection
   const toggleNumber = (number: number) => {
@@ -141,25 +123,23 @@ export default function NumberTrading() {
     setIsSubmitting(true);
     
     try {
-      // Place each trade via the backend API
-      const tradePromises = cart.items
+      // Prepare all trades for batch submission
+      const allTrades = cart.items
         .filter(item => item.gameType === 'number')
         .flatMap(item => 
-          item.options.map(numStr => 
-            tradingService.placeTrade(
-              selectedRoundId!,
-              'number',
-              numStr as any,
-              item.amount / item.options.length
-            )
-          )
+          item.options.map(numStr => ({
+            roundId: selectedRoundId!,
+            tradeType: 'number' as const,
+            selection: numStr as any,
+            amount: item.amount / item.options.length
+          }))
         );
 
-      const results = await Promise.all(tradePromises);
-      const successCount = results.filter((r: any) => r !== null).length;
+      // Place all trades in a single batch API call
+      const result = await tradingService.placeTradesBatch(allTrades);
 
-      if (successCount > 0) {
-        toast.success(`Successfully placed ${successCount} trade${successCount > 1 ? 's' : ''} for ${formatCurrency(cart.finalAmount)}!`, {
+      if (result && result.successCount > 0) {
+        toast.success(`Successfully placed ${result.successCount} trade${result.successCount > 1 ? 's' : ''} for ${formatCurrency(cart.finalAmount)}!`, {
           duration: 4000,
         });
         
@@ -169,10 +149,10 @@ export default function NumberTrading() {
         // Refresh wallet and rounds to show updated balance and trade counts
         await Promise.all([
           refreshWallet(),
-          fetchRounds()
+          fetchNumberRounds(true) // Force refresh after successful trade
         ]);
       } else {
-        toast.error('Failed to place any trades');
+        toast.error('Failed to place trades');
       }
     } catch (error) {
       console.error('Failed to submit orders:', error);
@@ -195,60 +175,47 @@ export default function NumberTrading() {
   });
 
   return (
-    <div className="p-6 max-w-7xl mx-auto pb-6">
+    <div className="p-6 max-w-7xl mx-auto pb-32">
+      {/* Header */}
       <div className="mb-6">
-        <div className="mb-4 flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-foreground">Number Trading Game</h1>
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">🔢 Number Trading</h1>
+            <p className="text-muted-foreground mt-1">
+              Choose numbers from 0-100 • Win 2x your amount!
+            </p>
+          </div>
           <button
-            onClick={fetchRounds}
+            onClick={() => fetchNumberRounds(true)}
             disabled={isLoadingRounds}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 disabled:opacity-50 transition-all shadow-md"
           >
             <RefreshCw size={18} className={isLoadingRounds ? 'animate-spin' : ''} />
-            Refresh Rounds
+            Refresh
           </button>
         </div>
-        <p className="text-muted-foreground text-lg">
-          Select numbers from 0-100 and place your bets. Win 2x your bet amount!
-        </p>
       </div>
 
       {/* Wallet Balance */}
-      <Card className="mb-6 bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6">
-        <div className="text-sm opacity-90 mb-1">Your Balance</div>
-        <div className="text-3xl font-bold">{formatCurrency(wallet?.balance || 0)}</div>
+      <Card className="mb-6 bg-gradient-to-r from-blue-500 to-blue-600 text-white p-5 shadow-lg">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-sm opacity-90">Wallet Balance</div>
+            <div className="text-3xl font-bold">{formatCurrency(wallet?.balance || 0)}</div>
+          </div>
+          <div className="text-5xl opacity-80">💰</div>
+        </div>
       </Card>
 
-      {/* Selected Round Info - Only show when a round is selected */}
-      {selectedRoundId && (() => {
-        const selectedRound = [...activeRounds, ...upcomingRounds].find(r => r.id === selectedRoundId);
-        if (!selectedRound) return null;
-        
-        return (
-          <Card className="mb-6 p-4 bg-gradient-to-r from-purple-500 to-pink-600 text-white">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-sm opacity-90">Selected Round</div>
-                <div className="text-xl font-bold">Round #{selectedRound.roundNumber}</div>
-              </div>
-              <div className="text-right">
-                <div className="text-sm opacity-90">Round ID</div>
-                <div className="text-xs font-mono">#{selectedRound.roundId?.slice(-8) || selectedRound.id.slice(-8)}</div>
-              </div>
-            </div>
-          </Card>
-        );
-      })()}
-
-      {/* Important Info Banner */}
+      {/* Important Info Banner - Only show when no round selected */}
       {!selectedRoundId && (
-        <Card className="mb-6 p-4 bg-orange-50 border-2 border-orange-200">
+        <Card className="mb-6 p-4 bg-orange-50 border-2 border-orange-300">
           <div className="flex items-start gap-3">
             <div className="text-2xl">⚠️</div>
             <div className="flex-1">
-              <h3 className="font-bold text-orange-900 mb-1">Please Select a Round</h3>
+              <h3 className="font-bold text-orange-900 mb-1">Select a Round to Start Trading</h3>
               <p className="text-sm text-orange-700">
-                Select an active round from the list below to start trading. Service charge: <strong>10% (minimum ₹5)</strong>
+                Choose an active round below. Service charge: <strong>10% (minimum ₹5 per trade)</strong>
               </p>
             </div>
           </div>
@@ -256,7 +223,7 @@ export default function NumberTrading() {
       )}
 
       {/* Trading Rounds Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* Active Rounds */}
         <RoundsList
           rounds={activeRounds}

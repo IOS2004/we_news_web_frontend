@@ -175,6 +175,48 @@ class TradingService {
   }
 
   /**
+   * Place multiple trades in a single batch API call
+   * POST /api/trading/place-trades-batch
+   * Backend expects: { trades: Array<{ roundId, tradeType, selection, amount }> }
+   * Returns: { success, message, data: { successCount, trades, transaction } }
+   */
+  async placeTradesBatch(
+    trades: Array<{
+      roundId: string;
+      tradeType: RoundType;
+      selection: TradingColor | TradingNumber;
+      amount: number;
+    }>
+  ): Promise<any> {
+    try {
+      const response = await apiCall<any>(
+        apiClient.post("/trading/place-trades-batch", {
+          trades,
+        }),
+        {
+          showLoading: true,
+        }
+      );
+
+      if (response.success) {
+        toast.success(
+          `Successfully placed ${response.data.successCount} trade${
+            response.data.successCount > 1 ? "s" : ""
+          }!`
+        );
+        return response.data;
+      }
+      return null;
+    } catch (error: any) {
+      console.error("Error placing batch trades:", error);
+      toast.error(
+        error.response?.data?.message || "Failed to place batch trades"
+      );
+      throw error;
+    }
+  }
+
+  /**
    * Get active rounds
    * GET /api/trading/active-rounds?roundType=colour|number
    * Backend returns: { success, count, data: [ ...rounds ] }
@@ -333,6 +375,100 @@ class TradingService {
     } catch (error: any) {
       console.error("Error fetching all trades:", error);
       return [];
+    }
+  }
+
+  /**
+   * Get user's trades with pagination and filters (alias for getAllMyTrades for now)
+   * This method exists for compatibility with MyTrades page
+   */
+  async getMyOrders(params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    gameType?: string;
+  }): Promise<{
+    items: UserTrades[];
+    pagination?: {
+      hasNext: boolean;
+      page: number;
+      limit: number;
+      total: number;
+    };
+  }> {
+    try {
+      const response = await apiCall<AllUserTradesResponse>(
+        apiClient.get("/trading/my-trades")
+      );
+
+      if (response.success) {
+        let filteredData = response.data;
+
+        // Filter by game type if specified
+        if (params?.gameType && params.gameType !== "all") {
+          const gameTypeMap: Record<string, string> = {
+            color: "colour",
+            number: "number",
+          };
+          const roundType = gameTypeMap[params.gameType] || params.gameType;
+          filteredData = filteredData.filter(
+            (trade) => trade.roundType === roundType
+          );
+        }
+
+        // Filter by status if specified
+        if (params?.status && params.status !== "all") {
+          filteredData = filteredData.filter((trade) => {
+            if (params.status === "pending") {
+              return trade.status === "active";
+            } else if (params.status === "won") {
+              // For won/lost, we'd need to check the result
+              // For now, just return completed trades
+              return trade.status === "completed";
+            } else if (params.status === "lost") {
+              return trade.status === "completed";
+            }
+            return true;
+          });
+        }
+
+        // Simple pagination (client-side for now)
+        const page = params?.page || 1;
+        const limit = params?.limit || 20;
+        const startIndex = (page - 1) * limit;
+        const endIndex = startIndex + limit;
+        const paginatedData = filteredData.slice(startIndex, endIndex);
+
+        return {
+          items: paginatedData,
+          pagination: {
+            hasNext: endIndex < filteredData.length,
+            page,
+            limit,
+            total: filteredData.length,
+          },
+        };
+      }
+      return {
+        items: [],
+        pagination: {
+          hasNext: false,
+          page: 1,
+          limit: 20,
+          total: 0,
+        },
+      };
+    } catch (error: any) {
+      console.error("Error fetching my orders:", error);
+      return {
+        items: [],
+        pagination: {
+          hasNext: false,
+          page: 1,
+          limit: 20,
+          total: 0,
+        },
+      };
     }
   }
 

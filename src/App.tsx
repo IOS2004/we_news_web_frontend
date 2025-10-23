@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { AuthProvider } from './contexts/AuthContext'
 import { WalletProvider } from './contexts/WalletContext'
+import { RoundsProvider } from './contexts/RoundsContext'
 import ProtectedRoute from './components/common/ProtectedRoute'
 import MainLayout from './layouts/MainLayout'
 import AuthLayout from './layouts/AuthLayout'
@@ -41,7 +42,8 @@ function App() {
   return (
     <AuthProvider>
       <WalletProvider>
-        <Routes>
+        <RoundsProvider>
+          <Routes>
           {/* Public Routes - No Auth Required */}
           <Route path="/landing" element={<PublicLanding />} />
           <Route path="/guest-topup" element={<GuestTopup />} />
@@ -90,6 +92,7 @@ function App() {
         </Routes>
         
         <Toaster position="top-right" />
+        </RoundsProvider>
       </WalletProvider>
     </AuthProvider>
   )

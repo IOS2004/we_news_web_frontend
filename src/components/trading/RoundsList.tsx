@@ -1,4 +1,4 @@
-import { Clock, TrendingUp, Users } from 'lucide-react';
+import { Clock } from 'lucide-react';
 import Card from '@/components/common/Card';
 
 interface Round {
@@ -32,14 +32,31 @@ const formatDateTime = (date: any): string => {
   try {
     let dateObj: Date;
     
-    // Handle Firestore Timestamp
-    if (date.toDate && typeof date.toDate === 'function') {
+    // Handle Firestore Timestamp serialized from backend (has _seconds and _nanoseconds)
+    if (date._seconds !== undefined) {
+      dateObj = new Date(date._seconds * 1000);
+    }
+    // Handle Firestore Timestamp object (has toDate method)
+    else if (date.toDate && typeof date.toDate === 'function') {
       dateObj = date.toDate();
-    } else if (date instanceof Date) {
+    } 
+    // Handle Date object
+    else if (date instanceof Date) {
       dateObj = date;
-    } else if (typeof date === 'string' || typeof date === 'number') {
+    } 
+    // Handle string or number timestamp
+    else if (typeof date === 'string' || typeof date === 'number') {
       dateObj = new Date(date);
-    } else {
+    } 
+    // Unknown format
+    else {
+      console.warn('Unknown date format:', date);
+      return 'N/A';
+    }
+    
+    // Validate the date
+    if (isNaN(dateObj.getTime())) {
+      console.warn('Invalid date:', date);
       return 'N/A';
     }
     
@@ -76,6 +93,7 @@ const formatDateTime = (date: any): string => {
       minute: '2-digit'
     });
   } catch (error) {
+    console.error('Error formatting date:', date, error);
     return 'N/A';
   }
 };
@@ -130,10 +148,12 @@ export const RoundsList = ({
   if (rounds.length === 0) {
     return (
       <Card className="p-6">
-        <h2 className="text-xl font-semibold mb-4">{title}</h2>
+        <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+          {title}
+        </h2>
         <div className="text-center py-8 text-muted-foreground">
           <Clock className="mx-auto mb-2 opacity-50" size={40} />
-          <p>{emptyMessage}</p>
+          <p className="text-sm">{emptyMessage}</p>
         </div>
       </Card>
     );
@@ -141,8 +161,11 @@ export const RoundsList = ({
 
   return (
     <Card className="p-6">
-      <h2 className="text-xl font-semibold mb-4">{title}</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+        {title}
+        <span className="text-sm font-normal text-muted-foreground">({rounds.length})</span>
+      </h2>
+      <div className="grid grid-cols-1 gap-3">
         {rounds.map((round) => {
           const isSelected = selectedRoundId === round.id;
           const canSelect = round.status === 'active' || round.status === 'open' || round.status === 'upcoming';
@@ -153,65 +176,92 @@ export const RoundsList = ({
               onClick={() => canSelect && onSelectRound(round.id)}
               disabled={!canSelect}
               className={`
-                text-left p-4 rounded-lg border-2 transition-all duration-200
+                text-left p-4 rounded-xl border-2 transition-all duration-200
                 ${isSelected 
-                  ? 'bg-gradient-to-br from-blue-50 to-purple-50 border-blue-500 shadow-lg ring-2 ring-blue-300 scale-105' 
+                  ? 'bg-gradient-to-r from-blue-500 to-purple-600 border-blue-600 shadow-lg text-white scale-[1.02]' 
                   : canSelect
-                    ? 'bg-card border-border hover:border-blue-300 hover:shadow-md hover:scale-102'
-                    : 'bg-muted border-border opacity-60 cursor-not-allowed'
+                    ? 'bg-white border-gray-200 hover:border-blue-400 hover:shadow-md'
+                    : 'bg-gray-50 border-gray-200 opacity-50 cursor-not-allowed'
                 }
               `}
             >
-              {/* Header */}
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl">{getStatusIcon(round.status)}</span>
-                  <div>
-                    <h3 className="font-bold text-base">Round #{round.roundNumber}</h3>
-                    <p className="text-xs text-muted-foreground">
-                      {round.roundId?.slice(-6) || round.id.slice(-6)}
+              <div className="flex items-center justify-between">
+                {/* Left: Round Info */}
+                <div className="flex items-center gap-3 flex-1">
+                  <div className={`text-2xl ${isSelected ? 'opacity-100' : 'opacity-80'}`}>
+                    {getStatusIcon(round.status)}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className={`font-bold text-lg ${isSelected ? 'text-white' : 'text-gray-900'}`}>
+                        Round #{round.roundNumber}
+                      </h3>
+                      <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                        isSelected 
+                          ? 'bg-white/20 text-white' 
+                          : getStatusColor(round.status)
+                      }`}>
+                        {round.status === 'active' || round.status === 'open' ? 'ACTIVE' : round.status.toUpperCase()}
+                      </span>
+                    </div>
+                    <p className={`text-xs mt-0.5 ${isSelected ? 'text-white/80' : 'text-muted-foreground'}`}>
+                      ID: {round.roundId?.substring(0, 8) || round.id.substring(0, 8)}
                     </p>
                   </div>
                 </div>
-                <span className={`px-2 py-1 rounded-full text-xs font-semibold border ${getStatusColor(round.status)}`}>
-                  {round.status === 'active' || round.status === 'open' ? 'ACTIVE' : round.status.toUpperCase()}
-                </span>
-              </div>
 
-              {/* Details */}
-              <div className="space-y-2">
-                {/* Game Type */}
-                <div className="flex items-center gap-2 text-sm">
-                  <TrendingUp size={14} className="text-muted-foreground" />
-                  <span className="text-muted-foreground capitalize">{round.gameType}</span>
-                </div>
-
-                {/* Total Trades */}
-                <div className="flex items-center gap-2 text-sm">
-                  <Users size={14} className="text-muted-foreground" />
-                  <span className="text-muted-foreground">Trades: {round.totalTrades || 0}</span>
-                </div>
-
-                {/* Betting Closes Time - Most Important */}
-                {round.resultDeclarationTime && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <Clock size={14} className="text-orange-600" />
-                    <span className="text-orange-700 font-medium text-xs">
-                      Closes: {formatDateTime(round.resultDeclarationTime)}
-                    </span>
+                {/* Right: Stats */}
+                <div className="flex items-center gap-4">
+                  {/* Trades Count */}
+                  <div className="text-center">
+                    <div className={`text-xs ${isSelected ? 'text-white/70' : 'text-muted-foreground'}`}>
+                      Trades
+                    </div>
+                    <div className={`text-lg font-bold ${isSelected ? 'text-white' : 'text-gray-900'}`}>
+                      {round.totalTrades || 0}
+                    </div>
                   </div>
-                )}
-              </div>
 
-              {/* Selection Indicator */}
-              {isSelected && (
-                <div className="mt-3 pt-3 border-t border-blue-200">
-                  <div className="flex items-center justify-center gap-1 text-blue-600 font-semibold text-sm">
-                    <span>✓</span>
-                    <span>Selected</span>
-                  </div>
+                  {/* Start Time */}
+                  {round.startTime && (round.status === 'upcoming' || round.status === 'active') && (
+                    <div className={`px-3 py-2 rounded-lg ${
+                      isSelected ? 'bg-white/20' : 'bg-blue-50'
+                    }`}>
+                      <div className={`text-xs ${isSelected ? 'text-white/80' : 'text-blue-600'} flex items-center gap-1`}>
+                        <Clock size={12} />
+                        <span>Starts</span>
+                      </div>
+                      <div className={`text-sm font-bold ${isSelected ? 'text-white' : 'text-blue-700'}`}>
+                        {formatDateTime(round.startTime)}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Closing Time */}
+                  {round.resultDeclarationTime && (round.status === 'active' || round.status === 'open') && (
+                    <div className={`px-3 py-2 rounded-lg ${
+                      isSelected ? 'bg-white/20' : 'bg-orange-50'
+                    }`}>
+                      <div className={`text-xs ${isSelected ? 'text-white/80' : 'text-orange-600'} flex items-center gap-1`}>
+                        <Clock size={12} />
+                        <span>Closes</span>
+                      </div>
+                      <div className={`text-sm font-bold ${isSelected ? 'text-white' : 'text-orange-700'}`}>
+                        {formatDateTime(round.resultDeclarationTime)}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Selected Indicator */}
+                  {isSelected && (
+                    <div className="ml-2">
+                      <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                        <span className="text-white text-lg">✓</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
             </button>
           );
         })}
