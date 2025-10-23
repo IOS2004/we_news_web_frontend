@@ -10,18 +10,20 @@ The web frontend is now fully integrated with the real trading backend API. All 
 
 ### User Trading Routes (`/api/trading/`)
 
-| Endpoint | Method | Description | Request Body | Response |
-|----------|--------|-------------|--------------|----------|
-| `/place-trade` | POST | Place a trade in active round | `{ roundId, tradeType, selection, amount }` | Trade details + wallet transaction |
-| `/active-rounds` | GET | Get active trading rounds | Query: `?roundType=colour\|number` | Array of active rounds |
-| `/rounds/:roundId` | GET | Get specific round details | - | Round details with trade summary |
-| `/rounds/:roundId/my-trades` | GET | Get user's trades in round | - | User's color/number trades |
-| `/my-trades` | GET | Get all user's trades | - | All trades across rounds |
-| `/rounds/:roundId/check-winnings` | GET | Check winnings in completed round | - | Winning status and amount |
-| `/wallet-balance` | GET | Get wallet balance | - | Balance and trading status |
+| Endpoint                          | Method | Description                       | Request Body                                | Response                           |
+| --------------------------------- | ------ | --------------------------------- | ------------------------------------------- | ---------------------------------- |
+| `/place-trade`                    | POST   | Place a trade in active round     | `{ roundId, tradeType, selection, amount }` | Trade details + wallet transaction |
+| `/active-rounds`                  | GET    | Get active trading rounds         | Query: `?roundType=colour\|number`          | Array of active rounds             |
+| `/rounds/:roundId`                | GET    | Get specific round details        | -                                           | Round details with trade summary   |
+| `/rounds/:roundId/my-trades`      | GET    | Get user's trades in round        | -                                           | User's color/number trades         |
+| `/my-trades`                      | GET    | Get all user's trades             | -                                           | All trades across rounds           |
+| `/rounds/:roundId/check-winnings` | GET    | Check winnings in completed round | -                                           | Winning status and amount          |
+| `/wallet-balance`                 | GET    | Get wallet balance                | -                                           | Balance and trading status         |
 
 ### Authentication
+
 All endpoints require Bearer token authentication:
+
 ```
 Authorization: Bearer <JWT_TOKEN>
 ```
@@ -33,6 +35,7 @@ Authorization: Bearer <JWT_TOKEN>
 ### TradingService (`src/services/tradingApi.ts`)
 
 **Key Methods:**
+
 ```typescript
 // Place a trade
 tradingService.placeTrade(roundId, tradeType, selection, amount)
@@ -68,21 +71,23 @@ tradingService.formatTime(seconds) // Format as MM:SS
 ## 🔌 Socket.IO Real-time Integration
 
 ### Events Listened To:
+
 ```typescript
-socketService.onRoundCreated((round) => {})
-socketService.onRoundUpdated((round) => {})
-socketService.onRoundClosed((round) => {})
-socketService.onRoundFinalized((data) => {})
-socketService.onCountdownTick((data) => {})
-socketService.onTradePlaced((data) => {})
+socketService.onRoundCreated((round) => {});
+socketService.onRoundUpdated((round) => {});
+socketService.onRoundClosed((round) => {});
+socketService.onRoundFinalized((data) => {});
+socketService.onCountdownTick((data) => {});
+socketService.onTradePlaced((data) => {});
 ```
 
 ### Room Management:
+
 ```typescript
-socketService.joinTradingRoom('colour')
-socketService.leaveTradingRoom('colour')
-socketService.joinRoundRoom(roundId)
-socketService.leaveRoundRoom(roundId)
+socketService.joinTradingRoom("colour");
+socketService.leaveTradingRoom("colour");
+socketService.joinRoundRoom(roundId);
+socketService.leaveRoundRoom(roundId);
 ```
 
 ---
@@ -90,6 +95,7 @@ socketService.leaveRoundRoom(roundId)
 ## 📊 Data Flow
 
 ### 1. **Place Trade Flow**
+
 ```
 User selects color & amount
   ↓
@@ -111,6 +117,7 @@ Frontend: Updates UI with new balance
 ```
 
 ### 2. **Round Lifecycle**
+
 ```
 Admin creates round
   ↓
@@ -146,6 +153,7 @@ Cycle repeats
 ## 🎨 Color Trading Page (`ColorTrading.tsx`)
 
 ### Features Implemented:
+
 - ✅ Real-time round display with countdown timer
 - ✅ Live wallet balance integration
 - ✅ 12 color options (red, blue, green, yellow, orange, purple, pink, brown, cyan, magenta, lime, violet)
@@ -158,6 +166,7 @@ Cycle repeats
 - ✅ Validation: insufficient balance, trading closing soon, etc.
 
 ### UI States:
+
 1. **Loading State**: Shows spinner while fetching data
 2. **No Active Round**: Shows message to wait for next round
 3. **Active Round**: Full trading interface with timer
@@ -168,13 +177,17 @@ Cycle repeats
 ## 🔐 Wallet Integration
 
 ### Wallet Balance Check
+
 Before placing a trade:
+
 1. Frontend fetches wallet balance
 2. Validates user has sufficient balance
 3. Shows error if insufficient
 
 ### Wallet Deduction
+
 When trade is placed:
+
 1. Backend validates balance again
 2. Deducts amount from wallet
 3. Creates transaction record
@@ -182,6 +195,7 @@ When trade is placed:
 5. Frontend updates balance display
 
 ### Wallet Status
+
 - `active`: Can trade normally
 - `inactive`/`blocked`: Cannot place trades
 
@@ -190,6 +204,7 @@ When trade is placed:
 ## 🎯 API Response Examples
 
 ### Place Trade Success
+
 ```json
 {
   "success": true,
@@ -218,6 +233,7 @@ When trade is placed:
 ```
 
 ### Active Rounds Response
+
 ```json
 {
   "success": true,
@@ -243,6 +259,7 @@ When trade is placed:
 ```
 
 ### My Trades Response
+
 ```json
 {
   "success": true,
@@ -267,6 +284,7 @@ When trade is placed:
 ```
 
 ### Wallet Balance Response
+
 ```json
 {
   "success": true,
@@ -284,6 +302,7 @@ When trade is placed:
 ## 🚀 Testing Guide
 
 ### 1. **Start Backend** (Already Running)
+
 ```bash
 cd backend/backend
 npm start
@@ -291,6 +310,7 @@ npm start
 ```
 
 ### 2. **Start Frontend**
+
 ```bash
 cd web-frontend
 npm run dev
@@ -298,6 +318,7 @@ npm run dev
 ```
 
 ### 3. **Test Flow**
+
 1. **Login** to get authentication token
 2. **Navigate** to Color Trading page (`/color-trading`)
 3. **Wait** for active round (or ask admin to create one)
@@ -314,30 +335,36 @@ npm run dev
 ## 🔍 Debug Tips
 
 ### Check API Calls
+
 Open DevTools → Network tab:
+
 - Look for `/api/trading/*` calls
 - Check request headers (Authorization)
 - Verify response status codes
 - Inspect response data
 
 ### Check Socket Connection
+
 Open DevTools → Console:
+
 - Look for "✅ Socket connected" message
 - Check for socket event logs
 - Verify room joins
 
 ### Check Wallet Balance
+
 ```typescript
 // In browser console
-const balance = await tradingService.getWalletBalance()
-console.log(balance)
+const balance = await tradingService.getWalletBalance();
+console.log(balance);
 ```
 
 ### Check Active Rounds
+
 ```typescript
 // In browser console
-const rounds = await tradingService.getActiveRounds('colour')
-console.log(rounds)
+const rounds = await tradingService.getActiveRounds("colour");
+console.log(rounds);
 ```
 
 ---
@@ -345,25 +372,33 @@ console.log(rounds)
 ## ⚠️ Common Issues & Solutions
 
 ### Issue: "Insufficient wallet balance"
+
 **Solution**: Add money to wallet via `/add-money` page
 
 ### Issue: "No active round"
-**Solution**: 
+
+**Solution**:
+
 - Wait for automatic round creation
 - Or ask admin to create a round manually
 - Check admin panel at `/admin/trading-management`
 
 ### Issue: "Trading closing soon"
+
 **Solution**: Wait for next round (rounds auto-create)
 
 ### Issue: Socket not connecting
+
 **Solution**:
+
 - Check backend is running
 - Verify VITE_API_BASE_URL in `.env`
 - Check authentication token is valid
 
 ### Issue: API calls failing with 401
+
 **Solution**:
+
 - Login again to refresh token
 - Check token in localStorage
 - Verify token hasn't expired
@@ -373,12 +408,14 @@ console.log(rounds)
 ## 📁 Key Files Modified
 
 ### Frontend
+
 - ✅ `src/services/tradingApi.ts` - Complete rewrite with real API
 - ✅ `src/pages/ColorTrading.tsx` - Already using correct API
 - ✅ `src/services/socketService.ts` - Already configured
 - ✅ `src/types/trading.ts` - Type definitions
 
 ### Backend (Already Running)
+
 - ✅ `routes/userTradingRoutes.js` - User API routes
 - ✅ `controllers/userTradingController.js` - Trading logic
 - ✅ `models/TradingRoundModel.js` - Round management
@@ -397,7 +434,7 @@ console.log(rounds)
 ✅ Trades visible immediately after placement  
 ✅ Automatic round transitions  
 ✅ Error handling for all scenarios  
-✅ Type safety with TypeScript  
+✅ Type safety with TypeScript
 
 ---
 

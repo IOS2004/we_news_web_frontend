@@ -38,7 +38,8 @@ const calculateTotalAmount = (items: CartItem[]): number => {
 // Calculate service charge (10% of total amount with floor of ₹5)
 const calculateServiceCharge = (totalAmount: number): number => {
   if (totalAmount === 0) return 0;
-  const charge = Math.round(totalAmount * SERVICE_CHARGE_PERCENTAGE * 100) / 100;
+  const charge =
+    Math.round(totalAmount * SERVICE_CHARGE_PERCENTAGE * 100) / 100;
   return Math.max(charge, MIN_SERVICE_CHARGE); // Minimum ₹5 service charge
 };
 

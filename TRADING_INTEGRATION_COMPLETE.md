@@ -11,6 +11,7 @@ The trading API backend has been successfully integrated with the web frontend.
 ### Trading Endpoints:
 
 1. **POST** `/api/trading/place-trade`
+
    - Place a trade in an active round
    - **Auth Required:** Yes
    - **Body:**
@@ -30,12 +31,17 @@ The trading API backend has been successfully integrated with the web frontend.
        "data": {
          "trade": { "tradeId": "...", "selection": "...", "amount": 100 },
          "transaction": { "previousBalance": 1000, "newBalance": 900 },
-         "roundInfo": { "roundId": "...", "roundNumber": 1, "roundType": "colour" }
+         "roundInfo": {
+           "roundId": "...",
+           "roundNumber": 1,
+           "roundType": "colour"
+         }
        }
      }
      ```
 
 2. **GET** `/api/trading/active-rounds?roundType=colour|number`
+
    - Get all active trading rounds
    - **Auth Required:** Yes
    - **Response:**
@@ -59,6 +65,7 @@ The trading API backend has been successfully integrated with the web frontend.
      ```
 
 3. **GET** `/api/trading/rounds/:roundId`
+
    - Get specific round details
    - **Auth Required:** Yes
    - **Response:**
@@ -72,7 +79,9 @@ The trading API backend has been successfully integrated with the web frontend.
          "roundType": "colour",
          "status": "active",
          "result": null,
-         "colorTradeSummary": { "red": { "totalAmount": 500, "totalTrades": 5 } },
+         "colorTradeSummary": {
+           "red": { "totalAmount": 500, "totalTrades": 5 }
+         },
          "totalColorAmount": 1000,
          "totalTrades": 10
        }
@@ -80,6 +89,7 @@ The trading API backend has been successfully integrated with the web frontend.
      ```
 
 4. **GET** `/api/trading/rounds/:roundId/my-trades`
+
    - Get user's trades in a specific round
    - **Auth Required:** Yes
    - **Response:**
@@ -101,6 +111,7 @@ The trading API backend has been successfully integrated with the web frontend.
      ```
 
 5. **GET** `/api/trading/my-trades`
+
    - Get all user's trades across all rounds
    - **Auth Required:** Yes
    - **Response:**
@@ -123,6 +134,7 @@ The trading API backend has been successfully integrated with the web frontend.
      ```
 
 6. **GET** `/api/trading/rounds/:roundId/check-winnings`
+
    - Check if user won in a completed round
    - **Auth Required:** Yes
    - **Response:**
@@ -131,9 +143,7 @@ The trading API backend has been successfully integrated with the web frontend.
        "success": true,
        "data": {
          "hasWon": true,
-         "winnings": [
-           { "userId": "...", "amount": 150, "selection": "red" }
-         ],
+         "winnings": [{ "userId": "...", "amount": 150, "selection": "red" }],
          "totalAmount": 150,
          "result": "red",
          "walletBalance": 1150
@@ -160,6 +170,7 @@ The trading API backend has been successfully integrated with the web frontend.
 ## 🎯 Frontend Integration
 
 ### Files Updated:
+
 - ✅ `src/services/tradingApi.ts` - Trading service with backend integration
 - ✅ `src/types/trading.ts` - Type definitions matching backend
 - ✅ `src/services/apiClient.ts` - API client configuration
@@ -167,19 +178,19 @@ The trading API backend has been successfully integrated with the web frontend.
 ### Service Usage Example:
 
 ```typescript
-import { tradingService } from '@/services/tradingApi';
+import { tradingService } from "@/services/tradingApi";
 
 // Get active rounds
-const rounds = await tradingService.getActiveRounds('colour');
+const rounds = await tradingService.getActiveRounds("colour");
 
 // Check wallet balance
 const wallet = await tradingService.getWalletBalance();
 
 // Place a trade
 const result = await tradingService.placeTrade(
-  'round123',
-  'colour',
-  'red',
+  "round123",
+  "colour",
+  "red",
   100
 );
 
@@ -187,7 +198,7 @@ const result = await tradingService.placeTrade(
 const myTrades = await tradingService.getAllMyTrades();
 
 // Check winnings
-const winnings = await tradingService.checkWinnings('round123');
+const winnings = await tradingService.checkWinnings("round123");
 ```
 
 ## 🧪 Testing the Integration
@@ -195,11 +206,13 @@ const winnings = await tradingService.checkWinnings('round123');
 ### Method 1: Use the Test Page (Recommended)
 
 1. **Open the test page:**
+
    ```
    Open: web-frontend/test-trading-integration.html
    ```
 
 2. **Follow the steps in order:**
+
    - Step 1: Login with your credentials
    - Step 2: Get active rounds
    - Step 3: Check wallet balance
@@ -223,46 +236,47 @@ const winnings = await tradingService.checkWinnings('round123');
 // Make sure you're logged in first
 
 // Test 1: Get active rounds
-fetch('http://localhost:5000/api/trading/active-rounds', {
+fetch("http://localhost:5000/api/trading/active-rounds", {
   headers: {
-    'Authorization': 'Bearer YOUR_TOKEN_HERE',
-    'Content-Type': 'application/json'
-  }
+    Authorization: "Bearer YOUR_TOKEN_HERE",
+    "Content-Type": "application/json",
+  },
 })
-.then(r => r.json())
-.then(d => console.log('Active Rounds:', d));
+  .then((r) => r.json())
+  .then((d) => console.log("Active Rounds:", d));
 
 // Test 2: Get wallet balance
-fetch('http://localhost:5000/api/trading/wallet-balance', {
+fetch("http://localhost:5000/api/trading/wallet-balance", {
   headers: {
-    'Authorization': 'Bearer YOUR_TOKEN_HERE',
-    'Content-Type': 'application/json'
-  }
+    Authorization: "Bearer YOUR_TOKEN_HERE",
+    "Content-Type": "application/json",
+  },
 })
-.then(r => r.json())
-.then(d => console.log('Wallet:', d));
+  .then((r) => r.json())
+  .then((d) => console.log("Wallet:", d));
 
 // Test 3: Place a trade
-fetch('http://localhost:5000/api/trading/place-trade', {
-  method: 'POST',
+fetch("http://localhost:5000/api/trading/place-trade", {
+  method: "POST",
   headers: {
-    'Authorization': 'Bearer YOUR_TOKEN_HERE',
-    'Content-Type': 'application/json'
+    Authorization: "Bearer YOUR_TOKEN_HERE",
+    "Content-Type": "application/json",
   },
   body: JSON.stringify({
-    roundId: 'ROUND_ID_HERE',
-    tradeType: 'colour',
-    selection: 'red',
-    amount: 100
-  })
+    roundId: "ROUND_ID_HERE",
+    tradeType: "colour",
+    selection: "red",
+    amount: 100,
+  }),
 })
-.then(r => r.json())
-.then(d => console.log('Trade Result:', d));
+  .then((r) => r.json())
+  .then((d) => console.log("Trade Result:", d));
 ```
 
 ## 📊 What You Should See
 
 ### 1. **When Getting Active Rounds:**
+
 ```
 ✅ Success Response:
 - List of active rounds
@@ -271,6 +285,7 @@ fetch('http://localhost:5000/api/trading/place-trade', {
 ```
 
 ### 2. **When Checking Wallet:**
+
 ```
 ✅ Success Response:
 - Your current balance (e.g., ₹1,000.00)
@@ -279,6 +294,7 @@ fetch('http://localhost:5000/api/trading/place-trade', {
 ```
 
 ### 3. **When Placing a Trade:**
+
 ```
 ✅ Success Response:
 - Trade confirmation with trade ID
@@ -293,6 +309,7 @@ fetch('http://localhost:5000/api/trading/place-trade', {
 ```
 
 ### 4. **When Viewing Trades:**
+
 ```
 ✅ Success Response:
 - List of all your trades across rounds
@@ -302,6 +319,7 @@ fetch('http://localhost:5000/api/trading/place-trade', {
 ```
 
 ### 5. **When Checking Winnings:**
+
 ```
 ✅ Success Response (If Won):
 - "Has Won: Yes! 🎉"
@@ -333,22 +351,28 @@ To confirm integration is working:
 ## 🚨 Common Issues & Solutions
 
 ### Issue 1: "Network Error"
+
 **Solution:** Make sure backend is running on port 5000
+
 ```bash
 cd backend/backend
 npm start
 ```
 
 ### Issue 2: "401 Unauthorized"
+
 **Solution:** Login first to get authentication token
 
 ### Issue 3: "Insufficient balance"
+
 **Solution:** Top up wallet or use a test account with balance
 
 ### Issue 4: "Round not found"
+
 **Solution:** Get active rounds first, then use valid round ID
 
 ### Issue 5: "CORS Error"
+
 **Solution:** Backend already has CORS configured for localhost:5173
 
 ## ✅ Checklist for Reporting Back
@@ -388,6 +412,7 @@ Please check and report:
 ## 🎉 Success Indicators
 
 ### You'll know integration is working when:
+
 1. ✅ Login returns a token
 2. ✅ API calls include Authorization header
 3. ✅ Active rounds load without errors
@@ -399,6 +424,7 @@ Please check and report:
 ## 📞 Need Help?
 
 If you encounter issues:
+
 1. Check browser console for errors
 2. Check network tab for failed requests
 3. Verify backend is running on port 5000

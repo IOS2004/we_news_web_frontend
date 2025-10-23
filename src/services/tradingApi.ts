@@ -240,9 +240,10 @@ class TradingService {
       if (status) params.status = status;
       if (limit) params.limit = limit;
 
-      const response = await apiCall<{ success: boolean; data: { rounds: TradingRound[] } }>(
-        apiClient.get("/trading/rounds", { params })
-      );
+      const response = await apiCall<{
+        success: boolean;
+        data: { rounds: TradingRound[] };
+      }>(apiClient.get("/trading/rounds", { params }));
 
       if (response.success && response.data?.rounds) {
         return response.data.rounds;
@@ -289,7 +290,7 @@ class TradingService {
       if (response.success) {
         return response.data;
       }
-      
+
       // Return empty structure if no trades
       return {
         roundId,
@@ -340,7 +341,9 @@ class TradingService {
    * GET /api/trading/rounds/:roundId/check-winnings
    * Backend returns: { success, data: { hasWon, winnings, totalAmount, result, walletBalance } }
    */
-  async checkWinnings(roundId: string): Promise<WinningsResponse["data"] | null> {
+  async checkWinnings(
+    roundId: string
+  ): Promise<WinningsResponse["data"] | null> {
     try {
       const response = await apiCall<WinningsResponse>(
         apiClient.get(`/trading/rounds/${roundId}/check-winnings`)
@@ -369,7 +372,7 @@ class TradingService {
       if (response.success) {
         return response.data;
       }
-      
+
       // Return default structure
       return {
         balance: 0,
@@ -407,13 +410,13 @@ class TradingService {
   calculateTimeRemaining(endTime: any): number {
     try {
       let endDate: Date;
-      
+
       // Handle Firestore Timestamp
       if (endTime?.toDate) {
         endDate = endTime.toDate();
-      } 
+      }
       // Handle ISO string
-      else if (typeof endTime === 'string') {
+      else if (typeof endTime === "string") {
         endDate = new Date(endTime);
       }
       // Handle Date object
@@ -438,7 +441,9 @@ class TradingService {
   formatTime(seconds: number): string {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+    return `${mins.toString().padStart(2, "0")}:${secs
+      .toString()
+      .padStart(2, "0")}`;
   }
 }
 

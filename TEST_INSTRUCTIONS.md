@@ -11,6 +11,7 @@ I've successfully integrated the trading backend API with the web frontend. Here
 **A browser window should have opened automatically with the test page.**
 
 If not, manually open:
+
 ```
 F:\WeNews\web-frontend\test-trading-integration.html
 ```
@@ -20,18 +21,22 @@ F:\WeNews\web-frontend\test-trading-integration.html
 ## 📋 STEP 2: Follow These Tests in Order
 
 ### ✅ Test 1: Login (Step 1 on the page)
+
 **Default credentials already filled:**
+
 - Email: `test@example.com`
 - Password: `password123`
 
 **Click "Login" button**
 
 **✅ What you SHOULD see:**
+
 - Green box with "Login successful!"
 - Token displayed (starts with "eyJ...")
 - User email shown
 
 **❌ If you see an error:**
+
 - Report: "Login failed with message: [error message]"
 - Try different credentials if needed
 
@@ -44,6 +49,7 @@ F:\WeNews\web-frontend\test-trading-integration.html
 **Click "Get Active Rounds" button**
 
 **✅ What you SHOULD see:**
+
 - Green box showing list of active rounds
 - Each round shows:
   - Round ID (e.g., "abcd1234...")
@@ -52,11 +58,13 @@ F:\WeNews\web-frontend\test-trading-integration.html
   - Status (e.g., "active")
   - Total Trades count
 
-**📝 IMPORTANT:** 
+**📝 IMPORTANT:**
+
 - The first round ID will be auto-filled in Step 4
 - Copy the Round ID for later tests
 
 **❌ If you see:**
+
 - "No active rounds found" → Report: "No active trading rounds available"
 - Error message → Report: "Failed to get rounds: [error message]"
 
@@ -67,6 +75,7 @@ F:\WeNews\web-frontend\test-trading-integration.html
 **Click "Get Wallet Balance" button**
 
 **✅ What you SHOULD see:**
+
 - Green box showing:
   - Balance: ₹[amount]
   - Formatted: ₹[formatted amount]
@@ -76,6 +85,7 @@ F:\WeNews\web-frontend\test-trading-integration.html
 **📝 Note your balance for next test!**
 
 **❌ If you see:**
+
 - Balance: ₹0 → Report: "Wallet has no balance, cannot test trading"
 - Status: inactive → Report: "Wallet is inactive"
 - Error → Report: "Failed to get wallet: [error message]"
@@ -87,6 +97,7 @@ F:\WeNews\web-frontend\test-trading-integration.html
 **⚠️ THIS WILL DEDUCT FROM YOUR WALLET!**
 
 **Fields should be pre-filled:**
+
 - Round ID: (auto-filled from Test 2)
 - Trade Type: Colour
 - Selection: red
@@ -95,6 +106,7 @@ F:\WeNews\web-frontend\test-trading-integration.html
 **Click "Place Trade" button**
 
 **✅ What you SHOULD see:**
+
 - Green box showing:
   - "Trade placed successfully!"
   - Trade ID
@@ -104,10 +116,12 @@ F:\WeNews\web-frontend\test-trading-integration.html
   - New Balance (e.g., "₹900")
 
 **📝 VERIFY:**
+
 - New Balance = Previous Balance - Amount
 - If correct → Report: "✅ Trade placed and wallet deducted correctly"
 
 **❌ If you see:**
+
 - "Insufficient wallet balance" → Report: "Cannot test - wallet has insufficient balance"
 - "Round is not open" → Report: "Round closed, need active round"
 - "Round not found" → Report: "Invalid round ID"
@@ -120,6 +134,7 @@ F:\WeNews\web-frontend\test-trading-integration.html
 **Click "Get My Trades" button**
 
 **✅ What you SHOULD see:**
+
 - Green box showing:
   - Number of rounds with trades
   - For each round:
@@ -130,10 +145,12 @@ F:\WeNews\web-frontend\test-trading-integration.html
     - Status
 
 **📝 VERIFY:**
+
 - Should see the trade you just placed in Test 4
 - If you see it → Report: "✅ Trade history displays correctly"
 
 **❌ If you see:**
+
 - "No trades found" → Report: "Trade not appearing in history (BUG!)"
 - Error → Report: "Failed to get trades: [error message]"
 
@@ -149,6 +166,7 @@ F:\WeNews\web-frontend\test-trading-integration.html
 **Click "Check Winnings" button**
 
 **✅ What you SHOULD see:**
+
 - Green box if you won:
   - "Has Won: Yes! 🎉"
   - Total winning amount
@@ -160,6 +178,7 @@ F:\WeNews\web-frontend\test-trading-integration.html
   - Current balance
 
 **❌ If you see:**
+
 - "Round results not yet declared" → This is NORMAL for active rounds
 - Report: "✅ Winnings check works (round not completed yet)"
 
@@ -209,12 +228,14 @@ Screenshots attached: [Yes/No]
 ## 🔍 Additional Checks
 
 ### Check Browser Console (F12):
+
 1. Press F12 to open DevTools
 2. Go to "Console" tab
 3. Look for any RED errors
 4. Report: "Console errors: [Yes/No - describe if yes]"
 
 ### Check Network Tab:
+
 1. In DevTools, go to "Network" tab
 2. Click "Get Active Rounds" again
 3. Look for request to `active-rounds`
@@ -225,13 +246,13 @@ Screenshots attached: [Yes/No]
 
 ## 🚨 Common Issues & What They Mean
 
-| Issue | Meaning | Solution |
-|-------|---------|----------|
-| Login fails | Backend not reachable | Check if backend is running |
-| 401 Unauthorized | Token expired/invalid | Login again |
-| Insufficient balance | Wallet empty | Need to top up wallet first |
-| No active rounds | No games running | Admin needs to create rounds |
-| CORS error | Frontend/backend mismatch | Check ports (5000 & 5173) |
+| Issue                | Meaning                   | Solution                     |
+| -------------------- | ------------------------- | ---------------------------- |
+| Login fails          | Backend not reachable     | Check if backend is running  |
+| 401 Unauthorized     | Token expired/invalid     | Login again                  |
+| Insufficient balance | Wallet empty              | Need to top up wallet first  |
+| No active rounds     | No games running          | Admin needs to create rounds |
+| CORS error           | Frontend/backend mismatch | Check ports (5000 & 5173)    |
 
 ---
 
@@ -249,6 +270,7 @@ Screenshots attached: [Yes/No]
 ## 🎯 Key Things to Verify
 
 ### Critical Tests:
+
 - [ ] Can login and get token
 - [ ] Can see active rounds
 - [ ] Can see wallet balance
@@ -257,6 +279,7 @@ Screenshots attached: [Yes/No]
 - [ ] Trade appears in history
 
 ### Nice to Have:
+
 - [ ] Error messages are clear
 - [ ] UI is responsive
 - [ ] No console errors

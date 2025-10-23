@@ -3,12 +3,14 @@
 ## ✅ What Was Implemented
 
 ### 1. **Upcoming & Active Rounds List** 📋
+
 - Added ability to fetch and display **upcoming** and **active** rounds from backend
 - Created a new `RoundsList` component with beautiful UI
 - Shows round details: Round number, status, start/end times, total trades
 - Visual status indicators with colors and icons
 
 ### 2. **Round Selection Feature** 🎯
+
 - Users can now **select which round** they want to trade in
 - Selected round is highlighted with visual feedback
 - Round ID is used when adding items to cart
@@ -16,6 +18,7 @@
 - "Refresh Rounds" button to manually update the list
 
 ### 3. **Minimum Service Charge** 💰
+
 - Service charge now has a **floor of ₹5** (minimum)
 - Formula: `Max(10% of total amount, ₹5)`
 - Examples:
@@ -28,6 +31,7 @@
 ## 📁 Files Modified
 
 ### 1. **src/hooks/useCart.ts**
+
 - Updated `calculateServiceCharge()` function
 - Added `MIN_SERVICE_CHARGE = 5` constant
 - Service charge now returns max of 10% or ₹5
@@ -41,17 +45,20 @@ const calculateServiceCharge = (totalAmount: number): number => {
 // After
 const calculateServiceCharge = (totalAmount: number): number => {
   if (totalAmount === 0) return 0;
-  const charge = Math.round(totalAmount * SERVICE_CHARGE_PERCENTAGE * 100) / 100;
+  const charge =
+    Math.round(totalAmount * SERVICE_CHARGE_PERCENTAGE * 100) / 100;
   return Math.max(charge, MIN_SERVICE_CHARGE); // Minimum ₹5 service charge
 };
 ```
 
 ### 2. **src/services/tradingApi.ts**
+
 - Added new method `getRoundsByStatus()` to fetch rounds with different statuses
 - Supports filtering by: upcoming, open, closed, settled, cancelled
 - Integrates with existing backend API `/api/trading/rounds`
 
 ### 3. **src/components/trading/RoundsList.tsx** ⭐ NEW FILE
+
 - Beautiful rounds display component
 - Shows status badges with colors
 - Displays countdown timers for upcoming rounds
@@ -59,10 +66,12 @@ const calculateServiceCharge = (totalAmount: number): number => {
 - Responsive design
 
 ### 4. **src/components/trading/CartDrawer.tsx**
+
 - Updated to show "(min ₹5)" next to service charge
 - Better transparency about pricing
 
 ### 5. **src/pages/Trading.tsx**
+
 - Integrated rounds fetching on page load
 - Added "Refresh Rounds" button with loading animation
 - Display upcoming and active rounds side-by-side
@@ -78,10 +87,12 @@ const calculateServiceCharge = (totalAmount: number): number => {
 ### New Sections Added:
 
 1. **Info Banner** (Blue)
+
    - Shows service charge policy: "10% (minimum ₹5)"
    - Shows round selection status
 
 2. **Trading Rounds Section** (2-column grid)
+
    - Left: Active Rounds (green theme)
    - Right: Upcoming Rounds (blue theme)
    - Each round shows:
@@ -100,6 +111,7 @@ const calculateServiceCharge = (totalAmount: number): number => {
 ## 🔄 How It Works
 
 ### Round Selection Flow:
+
 ```
 1. Page loads → Fetch rounds from backend
    ├─ GET /api/trading/rounds?status=upcoming
@@ -120,6 +132,7 @@ const calculateServiceCharge = (totalAmount: number): number => {
 ```
 
 ### Service Charge Calculation:
+
 ```
 Cart Items:
 - Color 1: ₹10
@@ -148,11 +161,13 @@ Total: ₹110
 ### 1. Test Service Charge Minimum:
 
 **Test Case 1: Below minimum**
+
 - Add items totaling ₹30
 - Expected: Service charge = ₹5 (not ₹3)
 - Total should be ₹35
 
 **Test Case 2: Above minimum**
+
 - Add items totaling ₹100
 - Expected: Service charge = ₹10
 - Total should be ₹110
@@ -160,6 +175,7 @@ Total: ₹110
 ### 2. Test Rounds Display:
 
 **Steps:**
+
 1. Open Trading page
 2. Check if rounds appear in two sections
 3. Look for:
@@ -170,6 +186,7 @@ Total: ₹110
 ### 3. Test Round Selection:
 
 **Steps:**
+
 1. Click on an active round
 2. Check if it highlights with blue border
 3. Check if info banner shows "✓ Round selected"
@@ -180,6 +197,7 @@ Total: ₹110
 ### 4. Test Refresh:
 
 **Steps:**
+
 1. Click "Refresh Rounds" button
 2. Button should show spinning icon
 3. Rounds should reload
@@ -242,6 +260,7 @@ Total Amount:          ₹35
 ## 🎯 Benefits
 
 ### For Users:
+
 - ✅ Clear visibility of available rounds
 - ✅ Can plan ahead with upcoming rounds
 - ✅ Know exactly which round they're trading in
@@ -249,6 +268,7 @@ Total Amount:          ₹35
 - ✅ Transparent pricing
 
 ### For Admins:
+
 - ✅ Users can't accidentally trade in wrong round
 - ✅ Rounds are clearly displayed
 - ✅ Service charge revenue protected with minimum
@@ -265,6 +285,7 @@ GET /api/trading/rounds?status=open&limit=10
 ```
 
 ### Response Format:
+
 ```json
 {
   "success": true,
@@ -285,6 +306,7 @@ GET /api/trading/rounds?status=open&limit=10
 ```
 
 ### State Management:
+
 ```typescript
 const [upcomingRounds, setUpcomingRounds] = useState([]);
 const [activeRounds, setActiveRounds] = useState([]);
@@ -297,6 +319,7 @@ const [isLoadingRounds, setIsLoadingRounds] = useState(false);
 ## ✅ Verification Checklist
 
 Please verify:
+
 - [ ] Service charge shows ₹5 for small orders (< ₹50)
 - [ ] Service charge shows 10% for larger orders
 - [ ] Active rounds list displays correctly
@@ -314,9 +337,11 @@ Please verify:
 ## 🚨 Known Limitations
 
 1. **Auto-refresh**: Rounds don't auto-refresh (user must click button)
+
    - Can be improved with polling or WebSocket in future
 
 2. **Countdown**: Times are formatted but don't live update
+
    - Static display, good for performance
 
 3. **Filter**: Currently only shows color game rounds
@@ -338,6 +363,7 @@ Please verify:
 ## 🎉 Summary
 
 ### What Changed:
+
 ✅ Added rounds list (upcoming + active)
 ✅ Added round selection feature
 ✅ Implemented min ₹5 service charge
@@ -346,9 +372,11 @@ Please verify:
 ✅ Refresh functionality
 
 ### Files Created:
+
 - `src/components/trading/RoundsList.tsx` (New)
 
 ### Files Modified:
+
 - `src/hooks/useCart.ts`
 - `src/services/tradingApi.ts`
 - `src/components/trading/CartDrawer.tsx`
