@@ -51,6 +51,7 @@ export interface UserInvestment {
   
   // Plan-based referral ID (new structure)
   purchaseReferralId?: string; // Format: userid-planid-increment
+  myReferralCode?: string; // Format: u0001g0001 (short memorable code)
 
   // Optional fields that may or may not exist
   frequency?: "daily" | "weekly" | "monthly";
@@ -405,69 +406,48 @@ class InvestmentService {
 
   /**
    * Get network data for a specific investment (level-wise breakdown)
-   * Note: Backend doesn't have /investment/:id/network endpoint
-   * Using /referrals/tree instead which provides network data
-   * @param investmentId - Investment ID (currently not used as backend returns all referrals)
+   * Uses the plan-specific chain-tree endpoint which respects plan's numberOfLevels
+   * @param planId - Investment Plan ID
    */
-  async getInvestmentNetwork(_investmentId: string): Promise<any> {
+  async getInvestmentNetwork(planId: string): Promise<any> {
     try {
-      // Use referrals/tree endpoint instead since investment/:id/network doesn't exist
+      // Use chain-tree endpoint which reads upline/downline from user document
+      // This respects the plan's actual numberOfLevels (e.g., Platinum = 11 levels)
       const response = await apiCall<ApiResponse<any>>(
-        apiClient.get('/referrals/tree', { params: { levels: 15 } })
+        apiClient.get(`/investment/chain-tree/${planId}`)
       );
       
       const backendData = response.data || {};
-      const tree = backendData.tree || [];
+      const downline = backendData.downline || {};
       
-      // Transform tree structure into level-wise breakdown
+      // Transform downline structure into level-wise breakdown
       const levelsMap = new Map<number, any>();
       
-      const processTreeNode = (node: any) => {
-        if (!node || !node.user) return;
+      // Process downline levels (C1, C2, C3, etc.)
+      Object.keys(downline).forEach(levelKey => {
+        const levelNum = parseInt(levelKey.replace('C', ''));
+        const members = downline[levelKey] || [];
         
-        const level = node.level || 1;
-        
-        if (!levelsMap.has(level)) {
-          levelsMap.set(level, {
-            level,
-            totalMembers: 0,
-            activeMembers: 0,
-            members: [],
-            earnings: 0,
-          });
-        }
-        
-        const levelData = levelsMap.get(level)!;
-        levelData.totalMembers++;
-        
-        if (node.user.isActive || node.user.status === 'active') {
-          levelData.activeMembers++;
-        }
-        
-        levelData.members.push({
-          id: node.user.id,
-          username: node.user.username || 'Unknown',
-          firstName: node.user.firstName || '',
-          lastName: node.user.lastName || '',
-          email: node.user.email || '',
-          phoneNumber: node.user.phoneNumber || '',
-          joinedAt: node.user.createdAt || new Date(),
-          isActive: node.user.isActive || node.user.status === 'active',
-          referralCode: node.user.referralCode || '',
-          totalReferrals: node.referral?.totalReferrals || 0,
-          commissionEarned: node.referral?.commissionEarnings || 0,
+        levelsMap.set(levelNum, {
+          level: levelNum,
+          totalMembers: members.length,
+          activeMembers: members.filter((m: any) => m.isActive !== false).length,
+          members: members.map((member: any) => ({
+            id: member.userId,
+            username: member.username || 'Unknown',
+            firstName: member.firstName || '',
+            lastName: member.lastName || '',
+            email: member.email || '',
+            phoneNumber: member.phoneNumber || '',
+            joinedAt: member.joinedAt || new Date(),
+            isActive: member.isActive !== false,
+            referralCode: member.purchaseReferralId || '',
+            totalReferrals: 0,
+            commissionEarned: 0,
+          })),
+          earnings: 0,
         });
-        
-        levelData.earnings += node.referral?.commissionEarnings || 0;
-        
-        // Process downline recursively
-        if (node.downline && Array.isArray(node.downline)) {
-          node.downline.forEach(processTreeNode);
-        }
-      };
-      
-      // Process all tree nodes
-      tree.forEach(processTreeNode);
+      });
       
       // Convert map to sorted array
       const levels = Array.from(levelsMap.values()).sort((a, b) => a.level - b.level);
@@ -486,7 +466,8 @@ class InvestmentService {
           totalEarnings,
           referralEarnings: totalEarnings,
         },
-        tree, // Keep original tree structure
+        downline, // Keep original downline structure
+        upline: backendData.upline || {}, // Keep original upline structure
       };
     } catch (error) {
       console.error('Error fetching network data:', error);

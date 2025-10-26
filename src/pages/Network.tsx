@@ -58,12 +58,14 @@ export default function Network() {
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [networkData, setNetworkData] = useState<NetworkData | null>(null);
   const [selectedLevel, setSelectedLevel] = useState<number>(1);
-  const [viewMode, setViewMode] = useState<'overview' | 'tree' | 'members'>('overview');
+  const [viewMode, setViewMode] = useState<'overview' | 'tree' | 'members'>('tree');
   const [referralLink, setReferralLink] = useState('');
   const [loading, setLoading] = useState(true);
   const [showFullChainTree, setShowFullChainTree] = useState(false);
   const [chainTreeData, setChainTreeData] = useState<any>(null);
   const [loadingChainTree, setLoadingChainTree] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<any>(null);
+  const [showMemberModal, setShowMemberModal] = useState(false);
 
   // Load user's investments
   useEffect(() => {
@@ -76,10 +78,10 @@ export default function Network() {
 
         // Get planId from URL or use first active plan
         const planIdFromUrl = searchParams.get('planId');
-        if (planIdFromUrl && formattedData.some(inv => inv.id === planIdFromUrl)) {
+        if (planIdFromUrl && formattedData.some(inv => inv.planId === planIdFromUrl)) {
           setSelectedPlanId(planIdFromUrl);
         } else if (formattedData.length > 0) {
-          setSelectedPlanId(formattedData[0].id);
+          setSelectedPlanId(formattedData[0].planId);
         }
       } catch (error) {
         console.error('Failed to load investments:', error);
@@ -97,6 +99,8 @@ export default function Network() {
     if (selectedPlanId) {
       setSearchParams({ planId: selectedPlanId });
       loadNetworkData(selectedPlanId);
+      // Also load chain tree data immediately to check if user has upline/downline
+      loadFullChainTree();
     }
   }, [selectedPlanId]);
 
@@ -105,7 +109,7 @@ export default function Network() {
     document.title = 'Network - WeNews';
     const baseUrl = window.location.origin;
     // Find selected investment to get purchaseReferralId
-    const currentInvestment = investments.find(inv => inv.id === selectedPlanId);
+    const currentInvestment = investments.find(inv => inv.planId === selectedPlanId);
     const purchaseId = currentInvestment?.purchaseReferralId || '';
     if (purchaseId) {
       setReferralLink(`${baseUrl}/plans?ref=${purchaseId}`);
@@ -163,6 +167,47 @@ export default function Network() {
     try {
       setLoadingChainTree(true);
       const response = await investmentService.getChainTree(selectedPlanId);
+      
+      // Log detailed upline and downline structure to browser console
+      console.log('=== REFERRAL CHAIN STRUCTURE ===');
+      console.log('Plan:', response.planName);
+      console.log('Max Levels:', response.maxLevels);
+      console.log('\n📊 UPLINE (People above you):');
+      if (response.upline && Object.keys(response.upline).length > 0) {
+        console.table(response.upline);
+        Object.keys(response.upline).sort((a, b) => {
+          const levelA = parseInt(a.replace('C-', ''));
+          const levelB = parseInt(b.replace('C-', ''));
+          return levelB - levelA;
+        }).forEach(level => {
+          const members = response.upline[level];
+          console.log(`\n${level}:`, members);
+        });
+      } else {
+        console.log('No upline (You are at the top of the chain)');
+      }
+      
+      console.log('\n📊 DOWNLINE (People you referred):');
+      if (response.downline && Object.keys(response.downline).length > 0) {
+        console.table(response.downline);
+        Object.keys(response.downline).sort((a, b) => {
+          const levelA = parseInt(a.replace('C', ''));
+          const levelB = parseInt(b.replace('C', ''));
+          return levelA - levelB;
+        }).forEach(level => {
+          const members = response.downline[level];
+          console.log(`\n${level}: [${members.length} members]`, members);
+        });
+      } else {
+        console.log('No downline (No referrals yet)');
+      }
+      
+      console.log('\n📈 Summary:');
+      console.log('Total Upline Members:', response.totalUplineMembers || 0);
+      console.log('Total Downline Members:', response.totalDownlineMembers || 0);
+      console.log('Total Chain Members:', (response.totalUplineMembers || 0) + (response.totalDownlineMembers || 0));
+      console.log('===========================\n');
+      
       setChainTreeData(response);
       setShowFullChainTree(true);
     } catch (error) {
@@ -174,7 +219,7 @@ export default function Network() {
   };
 
   const selectedLevelData = networkData?.levels?.find(l => l.level === selectedLevel);
-  const selectedInvestment = investments.find(inv => inv.id === selectedPlanId);
+  const selectedInvestment = investments.find(inv => inv.planId === selectedPlanId);
 
   if (loading) {
     return (
@@ -270,172 +315,38 @@ export default function Network() {
         </div>
       </div>
 
-      {/* Purchase Referral ID & Plan-Based Chains */}
-      {selectedInvestment?.purchaseReferralId && (
-        <Card className="mb-6 p-6 bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200">
-          <h3 className="text-lg font-semibold mb-4">🔗 Plan-Based Referral Information</h3>
-          
-          {/* Purchase Referral ID */}
-          <div className="mb-4 p-3 bg-white rounded-lg border border-purple-200">
-            <div className="text-xs text-muted-foreground mb-1">Your Purchase Referral ID</div>
-            <div className="flex gap-2">
-              <code className="flex-1 px-3 py-2 bg-gray-50 rounded text-sm font-mono text-purple-700">
-                {selectedInvestment.purchaseReferralId}
-              </code>
-              <Button 
-                onClick={() => {
-                  navigator.clipboard.writeText(selectedInvestment.purchaseReferralId || '');
-                  toast.success('Purchase Referral ID copied!');
-                }}
-                variant="outline"
-                size="sm"
-              >
-                📋 Copy
-              </Button>
-            </div>
-            <div className="text-xs text-muted-foreground mt-1">
-              Format: userid-planid-increment
-            </div>
-          </div>
-
-          {/* Plan-Specific Upline & Downline */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Upline Chain */}
-            <div className="p-3 bg-white rounded-lg border border-blue-200">
-              <h4 className="text-sm font-semibold text-blue-700 mb-2">⬆️ Your Upline (This Plan)</h4>
-              {user?.upline && user.upline[selectedInvestment.planName.toLowerCase()] && 
-               user.upline[selectedInvestment.planName.toLowerCase()].length > 0 ? (
-                <div className="space-y-1">
-                  <div className="text-xs text-muted-foreground mb-2">
-                    {user.upline[selectedInvestment.planName.toLowerCase()].length} upline member(s)
-                  </div>
-                  <div className="max-h-32 overflow-y-auto space-y-1">
-                    {user.upline[selectedInvestment.planName.toLowerCase()].map((purchaseId, index) => {
-                      const userId = purchaseId.split('-')[0];
-                      return (
-                        <div key={index} className="text-xs px-2 py-1 bg-blue-50 rounded flex items-center justify-between">
-                          <span className="font-mono">-{index + 1}: {userId}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : (
-                <div className="text-xs text-muted-foreground">No upline for this plan</div>
-              )}
-            </div>
-
-            {/* Downline Chain */}
-            <div className="p-3 bg-white rounded-lg border border-green-200">
-              <h4 className="text-sm font-semibold text-green-700 mb-2">⬇️ Your Downline (This Plan)</h4>
-              {user?.downline && user.downline[selectedInvestment.planName.toLowerCase()] && 
-               user.downline[selectedInvestment.planName.toLowerCase()].length > 0 ? (
-                <div className="space-y-1">
-                  <div className="text-xs text-muted-foreground mb-2">
-                    {user.downline[selectedInvestment.planName.toLowerCase()].length} direct referral(s) for this plan
-                  </div>
-                  <div className="max-h-32 overflow-y-auto space-y-1">
-                    {user.downline[selectedInvestment.planName.toLowerCase()].map((purchaseId, index) => {
-                      const userId = purchaseId.split('-')[0];
-                      return (
-                        <div key={index} className="text-xs px-2 py-1 bg-green-50 rounded flex items-center justify-between">
-                          <span className="font-mono">C1: {userId}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : (
-                <div className="text-xs text-muted-foreground">No downline for this plan yet</div>
-              )}
-            </div>
-          </div>
-
-          <div className="mt-3 text-xs text-muted-foreground">
-            💡 Tip: You are at <strong>Level 0</strong>. Upline members are shown as -1, -2, -3 (above you). 
-            Your <strong>direct referrals</strong> are shown as <strong>C1</strong> (Chain Level 1). To see the full chain tree including C2, C3, etc., check the network tree view below.
-          </div>
-        </Card>
-      )}
-
-      {/* Full Chain Tree View */}
-      <Card className="mb-6 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">📊 Full Downline Chain Tree</h3>
-          <Button 
-            onClick={() => {
-              if (showFullChainTree) {
-                setShowFullChainTree(false);
-              } else {
-                loadFullChainTree();
-              }
-            }}
-            variant="outline"
-            disabled={loadingChainTree}
-          >
-            {loadingChainTree ? 'Loading...' : showFullChainTree ? 'Hide Tree' : 'Show Full Tree'}
-          </Button>
-        </div>
-
-        {showFullChainTree && chainTreeData && (
-          <div className="space-y-4">
-            <div className="text-sm text-muted-foreground mb-4">
-              Total members in your chain: <strong>{chainTreeData.totalMembers}</strong>
-            </div>
-
-            {Object.keys(chainTreeData.chainTree).sort((a, b) => {
-              const aNum = parseInt(a.replace('C', ''));
-              const bNum = parseInt(b.replace('C', ''));
-              return aNum - bNum;
-            }).map((chainLevel) => {
-              const members = chainTreeData.chainTree[chainLevel];
-              if (!members || members.length === 0) return null;
-
-              return (
-                <div key={chainLevel} className="border border-gray-200 rounded-lg p-4">
-                  <h4 className="font-semibold text-blue-700 mb-3">
-                    {chainLevel} ({members.length} member{members.length > 1 ? 's' : ''})
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {members.map((member: any, index: number) => (
-                      <div key={index} className="bg-gray-50 rounded p-3 text-sm">
-                        <div className="font-semibold text-gray-900">
-                          {member.firstName} {member.lastName}
-                        </div>
-                        <div className="text-xs text-gray-600 mt-1">
-                          @{member.username}
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1 font-mono">
-                          ID: {member.userId}
-                        </div>
-                        <div className={`text-xs mt-2 inline-block px-2 py-1 rounded ${
-                          member.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
-                        }`}>
-                          {member.status}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {!showFullChainTree && (
-          <div className="text-sm text-muted-foreground text-center py-4">
-            Click "Show Full Tree" to see all chain levels (C1, C2, C3, etc.) with member details
-          </div>
-        )}
-      </Card>
-
       {/* Referral Link Card (Plan-Specific) */}
       {selectedInvestment?.purchaseReferralId && (
         <Card className="mb-6 p-6 bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-200">
-          <h3 className="text-lg font-semibold mb-3">🎯 Your Referral Link for {selectedInvestment.planName}</h3>
-          <p className="text-sm text-muted-foreground mb-3">
-            Share this link to invite people to join this specific plan under your referral chain.
-          </p>
+          <h3 className="text-lg font-semibold mb-3">🎯 Your Referral for {selectedInvestment.planName}</h3>
+          
+          {/* Short Referral Code - Prominent Display */}
+          {selectedInvestment.myReferralCode && (
+            <div className="mb-4 p-4 bg-white rounded-lg border-2 border-green-300">
+              <div className="text-sm text-gray-600 mb-1">Your Referral Code:</div>
+              <div className="flex items-center gap-3">
+                <div className="text-3xl font-bold text-green-600 tracking-wider">
+                  {selectedInvestment.myReferralCode}
+                </div>
+                <Button
+                  onClick={() => {
+                    navigator.clipboard.writeText(selectedInvestment.myReferralCode);
+                    toast.success('Referral code copied!');
+                  }}
+                  size="sm"
+                  variant="outline"
+                >
+                  📋 Copy Code
+                </Button>
+              </div>
+              <div className="text-xs text-gray-500 mt-2">
+                ✨ Share this code with friends! They can enter it during purchase.
+              </div>
+            </div>
+          )}
+          
+          {/* Referral Link */}
+          <div className="text-sm text-gray-600 mb-2">Or share your referral link:</div>
           <div className="flex gap-2">
             <input
               type="text"
@@ -449,10 +360,6 @@ export default function Network() {
             <Button onClick={shareReferralLink} className="bg-green-600 hover:bg-green-700">
               🔗 Share
             </Button>
-          </div>
-          <div className="mt-2 text-xs text-muted-foreground">
-            When someone uses this link to purchase the <strong>{selectedInvestment.planName}</strong> plan, 
-            they'll be added to your downline for this plan and you'll earn commissions from their purchase.
           </div>
         </Card>
       )}
@@ -523,7 +430,7 @@ export default function Network() {
       )}
 
       {/* View Mode Toggle */}
-      {networkData.levels && networkData.levels.length > 0 && (
+      {((networkData.levels && networkData.levels.length > 0) || (chainTreeData && (chainTreeData.upline || chainTreeData.downline))) && (
         <>
           <div className="flex gap-2 mb-6">
             <button
@@ -620,45 +527,251 @@ export default function Network() {
         </div>
       )}
 
-      {viewMode === 'tree' && (
-        <Card className="p-6">
-          <h3 className="text-xl font-semibold mb-6">Network Tree Structure</h3>
-          <div className="flex flex-col items-center space-y-8">
-            {/* Root Node (You) */}
-            <div className="flex flex-col items-center">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white flex items-center justify-center font-bold text-lg shadow-lg">
-                You
+      {viewMode === 'tree' && chainTreeData && (
+        <div className="space-y-6">
+          {/* Summary */}
+          <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+              <div>
+                <div className="text-2xl font-bold text-blue-600">{chainTreeData.maxLevels}</div>
+                <div className="text-xs text-gray-600">Max Levels ({chainTreeData.planName})</div>
               </div>
-              <div className="text-sm font-medium mt-2">{user?.firstName} {user?.lastName}</div>
-            </div>
-
-            {/* Level Branches */}
-            {networkData.levels
-              .filter(l => l.totalMembers > 0)
-              .map((level) => (
-                <div key={level.level} className="flex flex-col items-center">
-                  <div className="text-sm font-semibold text-muted-foreground mb-3">
-                    Level {level.level} ({level.totalMembers} members)
-                  </div>
-                  <div className="flex flex-wrap justify-center gap-4">
-                    {Array.from({ length: Math.min(level.totalMembers, 10) }, (_, i) => (
-                      <div
-                        key={i}
-                        className="w-12 h-12 rounded-full bg-green-500 text-white flex items-center justify-center font-bold text-sm shadow-md"
-                      >
-                        {i + 1}
-                      </div>
-                    ))}
-                    {level.totalMembers > 10 && (
-                      <div className="w-12 h-12 rounded-full bg-gray-400 text-white flex items-center justify-center font-bold text-xs">
-                        +{level.totalMembers - 10}
-                      </div>
-                    )}
-                  </div>
+              <div>
+                <div className="text-2xl font-bold text-purple-600">{chainTreeData.totalUplineMembers || 0}</div>
+                <div className="text-xs text-gray-600">Upline Members</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-green-600">{chainTreeData.totalDownlineMembers || 0}</div>
+                <div className="text-xs text-gray-600">Downline Members</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-orange-600">
+                  {(chainTreeData.totalUplineMembers || 0) + (chainTreeData.totalDownlineMembers || 0)}
                 </div>
-              ))}
+                <div className="text-xs text-gray-600">Total Chain</div>
+              </div>
+            </div>
           </div>
-        </Card>
+
+          {/* Visual Tree Structure */}
+          <Card className="p-6">
+            <h3 className="text-xl font-semibold mb-6">Network Tree Structure</h3>
+            <div className="flex flex-col items-center space-y-8">
+              
+              {/* Upline Members (People above you) */}
+              {chainTreeData?.upline && Object.keys(chainTreeData.upline).length > 0 && (
+                <>
+                  {Object.keys(chainTreeData.upline).sort((a, b) => {
+                    const levelA = parseInt(a.replace('C-', ''));
+                    const levelB = parseInt(b.replace('C-', ''));
+                    return levelB - levelA; // Sort from top (C-2, C-1)
+                  }).map((chainLevel) => {
+                    const members = chainTreeData.upline[chainLevel];
+                    return (
+                      <div key={chainLevel} className="flex flex-col items-center">
+                        <div className="text-sm font-semibold text-purple-600 mb-3">
+                          Upline {chainLevel} ({members.length} member{members.length !== 1 ? 's' : ''})
+                        </div>
+                        <div className="flex flex-wrap justify-center gap-4">
+                          {members.map((member: any, i: number) => (
+                            <div
+                              key={member.userId || i}
+                              className="flex flex-col items-center cursor-pointer hover:scale-105 transition-transform"
+                              onClick={() => {
+                                setSelectedMember(member);
+                                setShowMemberModal(true);
+                              }}
+                            >
+                              <div className="w-14 h-14 rounded-full bg-purple-500 text-white flex items-center justify-center font-bold text-xs shadow-md">
+                                {((member.firstName?.[0] || '') + (member.lastName?.[0] || '')).toUpperCase() || member.username.substring(0, 2).toUpperCase()}
+                              </div>
+                              <div className="text-xs mt-1 text-center max-w-[120px]">
+                                <div className="font-semibold text-gray-900">
+                                  {member.firstName || ''} {member.lastName || ''}
+                                </div>
+                                <div className="text-purple-600">
+                                  @{member.username}
+                                </div>
+                                <div className="text-gray-500 truncate">
+                                  {member.email}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </>
+              )}
+
+              {/* Root Node (You) */}
+              <div className="flex flex-col items-center">
+                <div className="w-20 h-20 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white flex items-center justify-center font-bold text-lg shadow-lg">
+                  You
+                </div>
+                <div className="text-sm font-medium mt-2">{user?.firstName} {user?.lastName}</div>
+              </div>
+
+              {/* Downline Levels */}
+              {chainTreeData?.downline && Object.keys(chainTreeData.downline).length > 0 && (
+                <>
+                  {Object.keys(chainTreeData.downline).sort((a, b) => {
+                    const levelA = parseInt(a.replace('C', ''));
+                    const levelB = parseInt(b.replace('C', ''));
+                    return levelA - levelB; // Sort C1, C2, C3...
+                  }).map((chainLevel) => {
+                    const members = chainTreeData.downline[chainLevel];
+                    if (!members || members.length === 0) return null;
+                    
+                    return (
+                      <div key={chainLevel} className="flex flex-col items-center">
+                        <div className="text-sm font-semibold text-green-600 mb-3">
+                          Level {chainLevel.replace('C', '')} ({members.length} member{members.length !== 1 ? 's' : ''})
+                        </div>
+                        <div className="flex flex-wrap justify-center gap-4">
+                          {members.slice(0, 10).map((member: any, i: number) => (
+                            <div
+                              key={member.userId || i}
+                              className="flex flex-col items-center cursor-pointer hover:scale-105 transition-transform"
+                              onClick={() => {
+                                setSelectedMember(member);
+                                setShowMemberModal(true);
+                              }}
+                            >
+                              <div className="w-12 h-12 rounded-full bg-green-500 text-white flex items-center justify-center font-bold text-xs shadow-md">
+                                {((member.firstName?.[0] || '') + (member.lastName?.[0] || '')).toUpperCase() || member.username.substring(0, 2).toUpperCase()}
+                              </div>
+                              <div className="text-xs mt-1 text-center max-w-[100px]">
+                                <div className="font-semibold text-gray-900 truncate">
+                                  {member.firstName || ''} {member.lastName || ''}
+                                </div>
+                                <div className="text-green-600">
+                                  @{member.username}
+                                </div>
+                                <div className="text-gray-500 truncate">
+                                  {member.email}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                          {members.length > 10 && (
+                            <div className="w-12 h-12 rounded-full bg-gray-400 text-white flex items-center justify-center font-bold text-xs">
+                              +{members.length - 10}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </>
+              )}
+            </div>
+          </Card>
+
+          {/* Upline Section - Detailed Cards */}
+          {chainTreeData.upline && Object.keys(chainTreeData.upline).length > 0 && (
+            <div className="border-2 border-blue-300 rounded-lg p-4 bg-blue-50">
+              <h3 className="text-lg font-bold text-blue-700 mb-3">⬆️ Your Upline Chain</h3>
+              
+              {Object.keys(chainTreeData.upline).sort((a, b) => {
+                const aNum = parseInt(a.replace('C-', ''));
+                const bNum = parseInt(b.replace('C-', ''));
+                return bNum - aNum;
+              }).map((chainLevel) => {
+                const members = chainTreeData.upline[chainLevel];
+                if (!members || members.length === 0) return null;
+
+                return (
+                  <div key={chainLevel} className="mb-3 bg-white rounded-lg p-3">
+                    <h4 className="font-semibold text-blue-600 mb-2">
+                      {chainLevel} ({members.length} member{members.length > 1 ? 's' : ''})
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                      {members.map((member: any, index: number) => (
+                        <div 
+                          key={index} 
+                          className="bg-blue-50 rounded p-2 text-sm border border-blue-200 cursor-pointer hover:bg-blue-100 transition-colors"
+                          onClick={() => {
+                            setSelectedMember(member);
+                            setShowMemberModal(true);
+                          }}
+                        >
+                          <div className="font-semibold text-gray-900">
+                            {member.firstName} {member.lastName}
+                          </div>
+                          <div className="text-xs text-gray-600 mt-1">
+                            @{member.username}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Current User Indicator */}
+          <div className="text-center py-3">
+            <div className="inline-block bg-yellow-100 border-2 border-yellow-400 rounded-lg px-6 py-2">
+              <div className="text-sm font-semibold text-yellow-800">👤 YOU (Level 0)</div>
+              <div className="text-xs text-yellow-700">@{user?.username}</div>
+            </div>
+          </div>
+
+          {/* Downline Section - Detailed Cards */}
+          {chainTreeData.downline && Object.keys(chainTreeData.downline).length > 0 && (
+            <div className="border-2 border-green-300 rounded-lg p-4 bg-green-50">
+              <h3 className="text-lg font-bold text-green-700 mb-3">⬇️ Your Downline Chain</h3>
+              
+              {Object.keys(chainTreeData.downline).sort((a, b) => {
+                const aNum = parseInt(a.replace('C', ''));
+                const bNum = parseInt(b.replace('C', ''));
+                return aNum - bNum;
+              }).map((chainLevel) => {
+                const members = chainTreeData.downline[chainLevel];
+                if (!members || members.length === 0) return null;
+
+                return (
+                  <div key={chainLevel} className="mb-3 bg-white rounded-lg p-3">
+                    <h4 className="font-semibold text-green-600 mb-2">
+                      {chainLevel} - Chain Level {chainLevel.replace('C', '')} ({members.length} member{members.length > 1 ? 's' : ''})
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                      {members.map((member: any, index: number) => (
+                        <div 
+                          key={index} 
+                          className="bg-green-50 rounded p-2 text-sm border border-green-200 cursor-pointer hover:bg-green-100 transition-colors"
+                          onClick={() => {
+                            setSelectedMember(member);
+                            setShowMemberModal(true);
+                          }}
+                        >
+                          <div className="font-semibold text-gray-900">
+                            {member.firstName} {member.lastName}
+                          </div>
+                          <div className="text-xs text-gray-600 mt-1">
+                            @{member.username}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Empty state */}
+          {(!chainTreeData.upline || Object.keys(chainTreeData.upline).length === 0) &&
+           (!chainTreeData.downline || Object.keys(chainTreeData.downline).length === 0) && (
+            <div className="text-center py-8 text-gray-500">
+              <div className="text-4xl mb-2">🌱</div>
+              <p>No chain members yet. Start referring to build your network!</p>
+            </div>
+          )}
+        </div>
       )}
 
       {viewMode === 'members' && selectedLevelData && (
@@ -738,6 +851,68 @@ export default function Network() {
         </div>
       )}
         </>
+      )}
+
+      {/* Member Profile Modal */}
+      {showMemberModal && selectedMember && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowMemberModal(false)}
+        >
+          <div 
+            className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setShowMemberModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl font-bold"
+            >
+              ×
+            </button>
+            
+            <div className="text-center mb-6">
+              <div className="w-24 h-24 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white flex items-center justify-center font-bold text-3xl mx-auto shadow-lg mb-4">
+                {((selectedMember.firstName?.[0] || '') + (selectedMember.lastName?.[0] || '')).toUpperCase() || selectedMember.username.substring(0, 2).toUpperCase()}
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900">
+                {selectedMember.firstName || 'N/A'} {selectedMember.lastName || 'N/A'}
+              </h3>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                <div className="text-blue-600 text-xl">👤</div>
+                <div>
+                  <div className="text-xs text-gray-500">Username</div>
+                  <div className="font-medium text-gray-900">@{selectedMember.username}</div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                <div className="text-green-600 text-xl">📧</div>
+                <div>
+                  <div className="text-xs text-gray-500">Email</div>
+                  <div className="font-medium text-gray-900 break-all">{selectedMember.email || 'N/A'}</div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                <div className="text-purple-600 text-xl">📱</div>
+                <div>
+                  <div className="text-xs text-gray-500">Phone Number</div>
+                  <div className="font-medium text-gray-900">{selectedMember.phoneNumber || 'N/A'}</div>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowMemberModal(false)}
+              className="w-full mt-6 bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-lg font-semibold hover:opacity-90 transition-opacity"
+            >
+              Close
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
