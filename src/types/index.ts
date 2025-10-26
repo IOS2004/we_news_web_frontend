@@ -6,10 +6,6 @@ export interface User {
   firstName: string;
   lastName: string;
   role: "user" | "admin";
-  referralCode: string;
-  referredBy?: string;
-  totalReferrals: number;
-  referralEarnings: number;
   isActive: boolean;
   isVerified: boolean;
   createdAt: string;
@@ -17,6 +13,10 @@ export interface User {
   phone?: string;
   phoneNumber?: string;
   dateOfBirth?: string;
+  // Plan-based referral mappings (ONLY referral system)
+  // Each plan purchase creates independent referral chain
+  upline?: { [planName: string]: string[] }; // { gold: ['userid-planid-1', ...] }
+  downline?: { [planName: string]: string[] }; // { gold: ['userid-planid-2', ...] }
 }
 
 // Auth Types
@@ -33,7 +33,7 @@ export interface SignUpData {
   lastName: string;
   dateOfBirth: string;
   phoneNumber: string;
-  referralCode?: string;
+  // No referralCode - referrals happen at plan purchase, not signup
 }
 
 export interface AuthResponse {

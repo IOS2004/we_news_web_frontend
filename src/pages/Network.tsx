@@ -61,6 +61,9 @@ export default function Network() {
   const [viewMode, setViewMode] = useState<'overview' | 'tree' | 'members'>('overview');
   const [referralLink, setReferralLink] = useState('');
   const [loading, setLoading] = useState(true);
+  const [showFullChainTree, setShowFullChainTree] = useState(false);
+  const [chainTreeData, setChainTreeData] = useState<any>(null);
+  const [loadingChainTree, setLoadingChainTree] = useState(false);
 
   // Load user's investments
   useEffect(() => {
@@ -97,13 +100,19 @@ export default function Network() {
     }
   }, [selectedPlanId]);
 
-  // Generate referral link
+  // Generate referral link (plan-specific)
   useEffect(() => {
     document.title = 'Network - WeNews';
     const baseUrl = window.location.origin;
-    const code = user?.referralCode || user?.username || 'USER123';
-    setReferralLink(`${baseUrl}/auth/signup?ref=${code}`);
-  }, [user]);
+    // Find selected investment to get purchaseReferralId
+    const currentInvestment = investments.find(inv => inv.id === selectedPlanId);
+    const purchaseId = currentInvestment?.purchaseReferralId || '';
+    if (purchaseId) {
+      setReferralLink(`${baseUrl}/plans?ref=${purchaseId}`);
+    } else {
+      setReferralLink(`${baseUrl}/plans`);
+    }
+  }, [selectedPlanId, investments]);
 
   const loadNetworkData = async (planId: string) => {
     try {
@@ -145,6 +154,22 @@ export default function Network() {
       });
     } else {
       copyReferralLink();
+    }
+  };
+
+  const loadFullChainTree = async () => {
+    if (!selectedPlanId) return;
+    
+    try {
+      setLoadingChainTree(true);
+      const response = await investmentService.getChainTree(selectedPlanId);
+      setChainTreeData(response);
+      setShowFullChainTree(true);
+    } catch (error) {
+      console.error('Failed to load chain tree:', error);
+      toast.error('Failed to load full chain tree');
+    } finally {
+      setLoadingChainTree(false);
     }
   };
 
@@ -245,24 +270,192 @@ export default function Network() {
         </div>
       </div>
 
-      {/* Referral Link Card */}
-      <Card className="mb-6 p-6 bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-200">
-        <h3 className="text-lg font-semibold mb-3">Your Referral Link</h3>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={referralLink}
-            readOnly
-            className="flex-1 px-4 py-2 border border-border rounded-lg bg-white text-sm"
-          />
-          <Button onClick={copyReferralLink} variant="outline">
-            📋 Copy
-          </Button>
-          <Button onClick={shareReferralLink} className="bg-green-600 hover:bg-green-700">
-            🔗 Share
+      {/* Purchase Referral ID & Plan-Based Chains */}
+      {selectedInvestment?.purchaseReferralId && (
+        <Card className="mb-6 p-6 bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200">
+          <h3 className="text-lg font-semibold mb-4">🔗 Plan-Based Referral Information</h3>
+          
+          {/* Purchase Referral ID */}
+          <div className="mb-4 p-3 bg-white rounded-lg border border-purple-200">
+            <div className="text-xs text-muted-foreground mb-1">Your Purchase Referral ID</div>
+            <div className="flex gap-2">
+              <code className="flex-1 px-3 py-2 bg-gray-50 rounded text-sm font-mono text-purple-700">
+                {selectedInvestment.purchaseReferralId}
+              </code>
+              <Button 
+                onClick={() => {
+                  navigator.clipboard.writeText(selectedInvestment.purchaseReferralId || '');
+                  toast.success('Purchase Referral ID copied!');
+                }}
+                variant="outline"
+                size="sm"
+              >
+                📋 Copy
+              </Button>
+            </div>
+            <div className="text-xs text-muted-foreground mt-1">
+              Format: userid-planid-increment
+            </div>
+          </div>
+
+          {/* Plan-Specific Upline & Downline */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Upline Chain */}
+            <div className="p-3 bg-white rounded-lg border border-blue-200">
+              <h4 className="text-sm font-semibold text-blue-700 mb-2">⬆️ Your Upline (This Plan)</h4>
+              {user?.upline && user.upline[selectedInvestment.planName.toLowerCase()] && 
+               user.upline[selectedInvestment.planName.toLowerCase()].length > 0 ? (
+                <div className="space-y-1">
+                  <div className="text-xs text-muted-foreground mb-2">
+                    {user.upline[selectedInvestment.planName.toLowerCase()].length} upline member(s)
+                  </div>
+                  <div className="max-h-32 overflow-y-auto space-y-1">
+                    {user.upline[selectedInvestment.planName.toLowerCase()].map((purchaseId, index) => {
+                      const userId = purchaseId.split('-')[0];
+                      return (
+                        <div key={index} className="text-xs px-2 py-1 bg-blue-50 rounded flex items-center justify-between">
+                          <span className="font-mono">-{index + 1}: {userId}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-xs text-muted-foreground">No upline for this plan</div>
+              )}
+            </div>
+
+            {/* Downline Chain */}
+            <div className="p-3 bg-white rounded-lg border border-green-200">
+              <h4 className="text-sm font-semibold text-green-700 mb-2">⬇️ Your Downline (This Plan)</h4>
+              {user?.downline && user.downline[selectedInvestment.planName.toLowerCase()] && 
+               user.downline[selectedInvestment.planName.toLowerCase()].length > 0 ? (
+                <div className="space-y-1">
+                  <div className="text-xs text-muted-foreground mb-2">
+                    {user.downline[selectedInvestment.planName.toLowerCase()].length} direct referral(s) for this plan
+                  </div>
+                  <div className="max-h-32 overflow-y-auto space-y-1">
+                    {user.downline[selectedInvestment.planName.toLowerCase()].map((purchaseId, index) => {
+                      const userId = purchaseId.split('-')[0];
+                      return (
+                        <div key={index} className="text-xs px-2 py-1 bg-green-50 rounded flex items-center justify-between">
+                          <span className="font-mono">C1: {userId}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-xs text-muted-foreground">No downline for this plan yet</div>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-3 text-xs text-muted-foreground">
+            💡 Tip: You are at <strong>Level 0</strong>. Upline members are shown as -1, -2, -3 (above you). 
+            Your <strong>direct referrals</strong> are shown as <strong>C1</strong> (Chain Level 1). To see the full chain tree including C2, C3, etc., check the network tree view below.
+          </div>
+        </Card>
+      )}
+
+      {/* Full Chain Tree View */}
+      <Card className="mb-6 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold">📊 Full Downline Chain Tree</h3>
+          <Button 
+            onClick={() => {
+              if (showFullChainTree) {
+                setShowFullChainTree(false);
+              } else {
+                loadFullChainTree();
+              }
+            }}
+            variant="outline"
+            disabled={loadingChainTree}
+          >
+            {loadingChainTree ? 'Loading...' : showFullChainTree ? 'Hide Tree' : 'Show Full Tree'}
           </Button>
         </div>
+
+        {showFullChainTree && chainTreeData && (
+          <div className="space-y-4">
+            <div className="text-sm text-muted-foreground mb-4">
+              Total members in your chain: <strong>{chainTreeData.totalMembers}</strong>
+            </div>
+
+            {Object.keys(chainTreeData.chainTree).sort((a, b) => {
+              const aNum = parseInt(a.replace('C', ''));
+              const bNum = parseInt(b.replace('C', ''));
+              return aNum - bNum;
+            }).map((chainLevel) => {
+              const members = chainTreeData.chainTree[chainLevel];
+              if (!members || members.length === 0) return null;
+
+              return (
+                <div key={chainLevel} className="border border-gray-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-blue-700 mb-3">
+                    {chainLevel} ({members.length} member{members.length > 1 ? 's' : ''})
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {members.map((member: any, index: number) => (
+                      <div key={index} className="bg-gray-50 rounded p-3 text-sm">
+                        <div className="font-semibold text-gray-900">
+                          {member.firstName} {member.lastName}
+                        </div>
+                        <div className="text-xs text-gray-600 mt-1">
+                          @{member.username}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1 font-mono">
+                          ID: {member.userId}
+                        </div>
+                        <div className={`text-xs mt-2 inline-block px-2 py-1 rounded ${
+                          member.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                        }`}>
+                          {member.status}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {!showFullChainTree && (
+          <div className="text-sm text-muted-foreground text-center py-4">
+            Click "Show Full Tree" to see all chain levels (C1, C2, C3, etc.) with member details
+          </div>
+        )}
       </Card>
+
+      {/* Referral Link Card (Plan-Specific) */}
+      {selectedInvestment?.purchaseReferralId && (
+        <Card className="mb-6 p-6 bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-200">
+          <h3 className="text-lg font-semibold mb-3">🎯 Your Referral Link for {selectedInvestment.planName}</h3>
+          <p className="text-sm text-muted-foreground mb-3">
+            Share this link to invite people to join this specific plan under your referral chain.
+          </p>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={referralLink}
+              readOnly
+              className="flex-1 px-4 py-2 border border-border rounded-lg bg-white text-sm"
+            />
+            <Button onClick={copyReferralLink} variant="outline">
+              📋 Copy
+            </Button>
+            <Button onClick={shareReferralLink} className="bg-green-600 hover:bg-green-700">
+              🔗 Share
+            </Button>
+          </div>
+          <div className="mt-2 text-xs text-muted-foreground">
+            When someone uses this link to purchase the <strong>{selectedInvestment.planName}</strong> plan, 
+            they'll be added to your downline for this plan and you'll earn commissions from their purchase.
+          </div>
+        </Card>
+      )}
 
       {/* Earnings Summary */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">

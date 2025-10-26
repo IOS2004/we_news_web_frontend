@@ -48,6 +48,9 @@ export interface UserInvestment {
   status: "active" | "paused" | "completed" | "cancelled";
   createdAt: string | any;
   updatedAt: string | any;
+  
+  // Plan-based referral ID (new structure)
+  purchaseReferralId?: string; // Format: userid-planid-increment
 
   // Optional fields that may or may not exist
   frequency?: "daily" | "weekly" | "monthly";
@@ -499,6 +502,22 @@ class InvestmentService {
         },
         tree: [],
       };
+    }
+  }
+
+  /**
+   * Get full chain tree for a plan (C1, C2, C3, etc.)
+   */
+  async getChainTree(planId: string): Promise<any> {
+    try {
+      const response = await apiClient.get(`/investment/chain-tree/${planId}`);
+      if (response.data.success) {
+        return response.data.data;
+      }
+      throw new Error('Failed to fetch chain tree');
+    } catch (error) {
+      console.error('Error fetching chain tree:', error);
+      throw error;
     }
   }
 
