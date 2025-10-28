@@ -23,6 +23,7 @@ export default function SignUp() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Partial<SignUpData & { confirmPassword: string }>>({});
+  const [hasReferral, setHasReferral] = useState(false);
 
   // Auto-fill referral code from URL parameter
   useEffect(() => {
@@ -32,6 +33,13 @@ export default function SignUp() {
         ...prev,
         referralCode: refCode
       }));
+    }
+    
+    // Check if there's a pending referral
+    const pendingReferral = localStorage.getItem('pendingReferral');
+    const redirectUrl = localStorage.getItem('redirectAfterLogin');
+    if (pendingReferral && redirectUrl) {
+      setHasReferral(true);
     }
   }, [searchParams]);
 
@@ -77,7 +85,15 @@ export default function SignUp() {
     try {
       setIsLoading(true);
       await signUp(formData);
-      navigate('/dashboard');
+      
+      // Check if there's a redirect URL saved
+      const redirectUrl = localStorage.getItem('redirectAfterLogin');
+      if (redirectUrl) {
+        localStorage.removeItem('redirectAfterLogin');
+        navigate(redirectUrl);
+      } else {
+        navigate('/dashboard');
+      }
     } catch (error) {
       // Error is handled by AuthContext
     } finally {
@@ -88,6 +104,14 @@ export default function SignUp() {
   return (
     <Card>
       <h2 className="text-2xl font-bold text-center mb-6">Create Account</h2>
+      
+      {hasReferral && (
+        <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+          <p className="text-sm text-green-800 text-center">
+            🎉 You're signing up via a referral link! After registration, you'll be directed to the recommended plan.
+          </p>
+        </div>
+      )}
       
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
