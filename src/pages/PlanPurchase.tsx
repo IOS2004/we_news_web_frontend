@@ -6,7 +6,7 @@ import Button from '@/components/common/Button';
 import { formatCurrency } from '@/utils/helpers';
 import toast from 'react-hot-toast';
 import { apiClient } from '@/services/apiClient';
-import { ArrowLeft, Check, Info, Users, TrendingUp, Calendar, DollarSign } from 'lucide-react';
+import { ArrowLeft, Check, Info, Users, TrendingUp, Calendar, DollarSign, Wallet, AlertCircle } from 'lucide-react';
 
 interface InvestmentAmount {
   daily: number;
@@ -48,6 +48,7 @@ export default function PlanPurchase() {
   const [selectedFrequency, setSelectedFrequency] = useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [referrerPurchaseId, setReferrerPurchaseId] = useState<string | null>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   useEffect(() => {
     // Check for referral parameter
@@ -110,11 +111,15 @@ export default function PlanPurchase() {
       return;
     }
 
-    const confirmPurchase = window.confirm(
-      `Purchase ${plan.name} for ${formatCurrency(planAmount)}?\n\nAmount will be deducted from your wallet.`
-    );
+    // Show custom confirmation modal instead of window.confirm
+    setShowConfirmModal(true);
+  };
 
-    if (!confirmPurchase) return;
+  const confirmPurchase = async () => {
+    if (!plan) return;
+    
+    setShowConfirmModal(false);
+    const planAmount = plan.joiningAmount;
 
     setIsPurchasing(true);
     toast.loading('Processing purchase...', { id: 'purchase' });
@@ -447,6 +452,72 @@ export default function PlanPurchase() {
           </div>
         </div>
       </Card>
+
+      {/* Custom Confirmation Modal */}
+      {showConfirmModal && plan && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden transform transition-all">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-cyan-500 to-blue-600 p-6 text-white">
+              <div className="flex items-center justify-center w-16 h-16 bg-white bg-opacity-20 rounded-full mx-auto mb-4 backdrop-blur-sm">
+                <Wallet className="w-8 h-8" />
+              </div>
+              <h3 className="text-2xl font-bold text-center">Confirm Purchase</h3>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-4">
+              <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-medium text-gray-600">Plan</span>
+                  <span className="text-lg font-bold text-gray-900">{plan.name}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-600">Amount</span>
+                  <span className="text-2xl font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
+                    {formatCurrency(plan.joiningAmount)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-amber-800">
+                  <span className="font-semibold">Amount will be deducted from your wallet.</span>
+                  <br />
+                  <span className="text-amber-700">Current Balance: {formatCurrency(wallet?.balance || 0)}</span>
+                </p>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3 p-6 pt-0">
+              <Button
+                variant="outline"
+                onClick={() => setShowConfirmModal(false)}
+                disabled={isPurchasing}
+                className="flex-1 border-2 hover:bg-gray-50"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={confirmPurchase}
+                disabled={isPurchasing}
+                className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 shadow-lg hover:shadow-xl transition-all"
+              >
+                {isPurchasing ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Processing...</span>
+                  </div>
+                ) : (
+                  'Confirm Purchase'
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
