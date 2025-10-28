@@ -7,38 +7,60 @@ import type {
 
 export const withdrawalService = {
   // Request withdrawal
-  async requestWithdrawal(
-    amount: number,
-    bankDetails: WithdrawalRequest["bankDetails"]
-  ): Promise<WithdrawalRequest> {
-    const response = await api.post<ApiResponse<WithdrawalRequest>>(
+  async requestWithdrawal(data: {
+    amount: number;
+    bankAccountNumber: string;
+    ifscCode: string;
+    accountHolderName: string;
+  }): Promise<ApiResponse<{ withdrawalRequest: WithdrawalRequest; newBalance: number }>> {
+    const response = await api.post<ApiResponse<{ withdrawalRequest: WithdrawalRequest; newBalance: number }>>(
       "/withdrawals/request",
-      { amount, bankDetails }
-    );
-    return response.data.data!;
-  },
-
-  // Get withdrawal history
-  async getWithdrawalHistory(
-    page: number = 1,
-    limit: number = 20
-  ): Promise<PaginatedResponse<WithdrawalRequest>> {
-    const response = await api.get<PaginatedResponse<WithdrawalRequest>>(
-      "/withdrawals/history",
-      { params: { page, limit } }
+      data
     );
     return response.data;
   },
 
-  // Get pending withdrawals
-  async getPendingWithdrawals(): Promise<WithdrawalRequest[]> {
+  // Get user's withdrawal history
+  async getMyWithdrawals(
+    page: number = 1,
+    limit: number = 20,
+    status?: string
+  ): Promise<ApiResponse<WithdrawalRequest[]>> {
+    const params: any = { page, limit };
+    if (status) params.status = status;
+    
     const response = await api.get<ApiResponse<WithdrawalRequest[]>>(
-      "/withdrawals/pending"
+      "/withdrawals/my-requests",
+      { params }
     );
-    return response.data.data!;
+    return response.data;
   },
 
-  // Cancel withdrawal request
+  // Legacy method for backward compatibility
+  async getWithdrawalHistory(
+    page: number = 1,
+    limit: number = 20
+  ): Promise<PaginatedResponse<WithdrawalRequest>> {
+    const response = await this.getMyWithdrawals(page, limit);
+    return {
+      success: response.success,
+      data: response.data || [],
+      pagination: {
+        currentPage: page,
+        totalPages: 1,
+        totalItems: response.data?.length || 0,
+        itemsPerPage: limit
+      }
+    };
+  },
+
+  // Get pending withdrawals
+  async getPendingWithdrawals(): Promise<WithdrawalRequest[]> {
+    const response = await this.getMyWithdrawals(1, 100, 'pending');
+    return response.data || [];
+  },
+
+  // Cancel withdrawal request (if backend supports it)
   async cancelWithdrawal(withdrawalId: string): Promise<void> {
     await api.delete(`/withdrawals/${withdrawalId}`);
   },

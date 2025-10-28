@@ -173,16 +173,28 @@ export interface WithdrawalRequest {
   id: string;
   userId: string;
   amount: number;
-  bankDetails: {
+  status: "pending" | "approved" | "rejected" | "processing" | "completed";
+  paymentMethod?: string;
+  paymentDetails?: {
+    bankAccountNumber?: string;
+    ifscCode?: string;
+    accountHolderName?: string;
+  };
+  bankDetails?: {
     accountNumber: string;
     ifscCode: string;
     accountHolderName: string;
     bankName: string;
   };
-  status: "pending" | "approved" | "rejected" | "completed";
-  requestedAt: string;
+  requestDate?: string;
+  requestedAt?: string;
+  processedDate?: string;
   processedAt?: string;
+  adminNotes?: string;
+  rejectionReason?: string;
   remarks?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 // API Response Types
