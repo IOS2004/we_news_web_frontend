@@ -48,6 +48,10 @@ export default function PlanPurchase() {
   const [selectedFrequency, setSelectedFrequency] = useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [referrerPurchaseId, setReferrerPurchaseId] = useState<string | null>(null);
+  const [referralCode, setReferralCode] = useState('');
+  const [isVerifyingCode, setIsVerifyingCode] = useState(false);
+  const [verifiedReferrer, setVerifiedReferrer] = useState<any>(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   useEffect(() => {
     // Check for referral parameter
@@ -97,6 +101,46 @@ export default function PlanPurchase() {
       navigate('/plans');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const verifyReferralCode = async () => {
+    if (!referralCode.trim()) {
+      toast.error('Please enter a referral code');
+      return;
+    }
+
+    setIsVerifyingCode(true);
+    try {
+      const response = await apiClient.post('/referrals/verify-code', {
+        code: referralCode.trim()
+      });
+
+      if (response.data.success) {
+        const { data } = response.data;
+        console.log('Verification response:', data);
+        console.log('Plan info:', data.plan);
+        // Store both referrer info and plan info
+        setVerifiedReferrer({
+          ...data.referrer,
+          planName: data.plan.planName,
+          planId: data.plan.planId
+        });
+        setReferrerPurchaseId(data.purchaseReferralId);
+        toast.success(`✅ Referral code verified!`);
+      } else {
+        toast.error(response.data.message || 'Invalid referral code');
+        setVerifiedReferrer(null);
+        setReferrerPurchaseId(null);
+      }
+    } catch (error: any) {
+      console.error('Referral verification error:', error);
+      const errorMessage = error.response?.data?.message || 'Invalid referral code';
+      toast.error(errorMessage);
+      setVerifiedReferrer(null);
+      setReferrerPurchaseId(null);
+    } finally {
+      setIsVerifyingCode(false);
     }
   };
 
@@ -431,7 +475,7 @@ export default function PlanPurchase() {
               Cancel
             </Button>
             <Button
-              onClick={handlePurchase}
+              onClick={() => setShowPaymentModal(true)}
               disabled={isPurchasing || (wallet?.balance || 0) < plan.joiningAmount}
               className="min-w-[200px]"
             >
@@ -447,6 +491,159 @@ export default function PlanPurchase() {
           </div>
         </div>
       </Card>
+
+      {/* Payment Confirmation Modal */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <h3 className="text-2xl font-bold mb-4">Confirm Payment</h3>
+            
+            {/* Plan Details */}
+            <div className="bg-gray-50 rounded-lg p-4 mb-4">
+              <div className="flex justify-between mb-2">
+                <span className="text-gray-600">Plan:</span>
+                <span className="font-semibold">{plan.name}</span>
+              </div>
+              <div className="flex justify-between mb-2">
+                <span className="text-gray-600">Amount:</span>
+                <span className="font-semibold">{formatCurrency(plan.joiningAmount)}</span>
+              </div>
+              <div className="flex justify-between mb-2">
+                <span className="text-gray-600">GST (18%):</span>
+                <span className="font-semibold">{formatCurrency((plan.joiningAmount * 18) / 100)}</span>
+              </div>
+              <div className="flex justify-between pt-2 border-t border-gray-300">
+                <span className="font-bold">Total:</span>
+                <span className="font-bold text-lg">{formatCurrency(plan.joiningAmount + (plan.joiningAmount * 18) / 100)}</span>
+              </div>
+            </div>
+
+            {/* Referral Code Input */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Have a referral code? (Optional)
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={referralCode}
+                  onChange={(e) => {
+                    setReferralCode(e.target.value);
+                    setVerifiedReferrer(null);
+                  }}
+                  placeholder="e.g., s0001g0001"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={isVerifyingCode || !!verifiedReferrer}
+                />
+                {!verifiedReferrer && (
+                  <Button
+                    onClick={verifyReferralCode}
+                    disabled={isVerifyingCode || !referralCode.trim()}
+                    className="px-4"
+                  >
+                    {isVerifyingCode ? 'Verifying...' : 'Verify'}
+                  </Button>
+                )}
+              </div>
+              
+              {/* Verified Referrer Info */}
+              {verifiedReferrer && plan && (
+                <div className={`mt-3 p-3 rounded-lg border ${
+                  verifiedReferrer.planName?.toLowerCase() === plan.name.toLowerCase()
+                    ? 'bg-green-50 border-green-200'
+                    : 'bg-yellow-50 border-yellow-300'
+                }`}>
+                  <div className="flex items-start gap-2">
+                    {verifiedReferrer.planName?.toLowerCase() === plan.name.toLowerCase() ? (
+                      <Check className="w-5 h-5 text-green-700 mt-0.5 flex-shrink-0" />
+                    ) : (
+                      <span className="text-yellow-600 text-lg mt-0.5 flex-shrink-0">⚠️</span>
+                    )}
+                    <div className="flex-1">
+                      <div className={`font-semibold ${
+                        verifiedReferrer.planName?.toLowerCase() === plan.name.toLowerCase()
+                          ? 'text-green-700'
+                          : 'text-yellow-800'
+                      }`}>
+                        Referral by: {verifiedReferrer.fullName}
+                      </div>
+                      <div className={`text-sm ${
+                        verifiedReferrer.planName?.toLowerCase() === plan.name.toLowerCase()
+                          ? 'text-green-600'
+                          : 'text-yellow-700'
+                      }`}>
+                        @{verifiedReferrer.username}
+                      </div>
+                      <div className={`text-sm mt-1 font-medium ${
+                        verifiedReferrer.planName?.toLowerCase() === plan.name.toLowerCase()
+                          ? 'text-green-700'
+                          : 'text-yellow-800'
+                      }`}>
+                        Plan: {verifiedReferrer.planName || 'Unknown'}
+                      </div>
+                      
+                      {/* Warning message if plans don't match */}
+                      {verifiedReferrer.planName && verifiedReferrer.planName?.toLowerCase() !== plan.name.toLowerCase() && (
+                        <div className="mt-2 text-sm text-yellow-800 bg-yellow-100 p-2 rounded">
+                          ⚠️ Use this referral for {verifiedReferrer.planName} Plan to avail more benefits!
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setVerifiedReferrer(null);
+                      setReferrerPurchaseId(null);
+                      setReferralCode('');
+                    }}
+                    className={`text-xs mt-2 underline ${
+                      verifiedReferrer.planName?.toLowerCase() === plan.name.toLowerCase()
+                        ? 'text-green-600 hover:text-green-800'
+                        : 'text-yellow-600 hover:text-yellow-800'
+                    }`}
+                  >
+                    Remove referral
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Wallet Balance */}
+            <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Your Wallet Balance:</span>
+                <span className="font-semibold">{formatCurrency(wallet?.balance || 0)}</span>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowPaymentModal(false);
+                  setReferralCode('');
+                  setVerifiedReferrer(null);
+                }}
+                disabled={isPurchasing}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  setShowPaymentModal(false);
+                  handlePurchase();
+                }}
+                disabled={isPurchasing || (wallet?.balance || 0) < plan.joiningAmount}
+                className="flex-1"
+              >
+                {isPurchasing ? 'Processing...' : 'Confirm Payment'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
