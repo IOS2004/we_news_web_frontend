@@ -119,6 +119,7 @@ export default function MainLayout() {
                 <li key={item.name}>
                   <NavLink
                     to={item.to}
+                    end
                     onClick={() => setIsSidebarOpen(false)}
                     className={({ isActive }) =>
                       `flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
