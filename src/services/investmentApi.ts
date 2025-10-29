@@ -295,14 +295,61 @@ class InvestmentService {
       elite: "#DC2626",
     };
 
+    const normalizeToDate = (value: unknown): Date | null => {
+      try {
+        if (!value) return null;
+        if (value instanceof Date) return value;
+        if (typeof value === "string" || typeof value === "number") {
+          const parsed = new Date(value);
+          return isNaN(parsed.getTime()) ? null : parsed;
+        }
+        if (typeof value === "object") {
+          const maybeDate = value as { toDate?: () => Date; _seconds?: number; seconds?: number };
+          if (typeof maybeDate.toDate === "function") {
+            const parsed = maybeDate.toDate();
+            return isNaN(parsed.getTime()) ? null : parsed;
+          }
+          const seconds = maybeDate._seconds ?? maybeDate.seconds;
+          if (typeof seconds === "number") {
+            const parsed = new Date(seconds * 1000);
+            return isNaN(parsed.getTime()) ? null : parsed;
+          }
+        }
+        return null;
+      } catch {
+        return null;
+      }
+    };
+
     const planKey = investment.planName?.toLowerCase() || "base";
     const color = colorMapping[planKey] || "#3B82F6";
-    const daysRemaining = this.calculateDaysRemaining(investment.expiryDate);
+    const validity = investment.validity ?? investment.planValidity ?? 0;
+
+    const normalizedStart = normalizeToDate(investment.startDate) ?? normalizeToDate(investment.createdAt);
+    let normalizedExpiry = normalizeToDate(investment.expiryDate);
+
+    if (!normalizedExpiry && normalizedStart && validity > 0) {
+      normalizedExpiry = new Date(normalizedStart.getTime() + validity * 24 * 60 * 60 * 1000);
+    }
+
+    const today = new Date();
+    const elapsedMs = normalizedStart ? today.getTime() - normalizedStart.getTime() : 0;
+    const elapsedDays = normalizedStart ? Math.max(0, Math.floor(elapsedMs / (24 * 60 * 60 * 1000))) : 0;
+
+    const daysRemaining = normalizedExpiry
+      ? this.calculateDaysRemaining(normalizedExpiry)
+      : Math.max(0, validity - elapsedDays);
 
     return {
       ...investment,
       color,
+      validity,
+      startDate: normalizedStart ?? investment.startDate,
+      expiryDate: normalizedExpiry ?? investment.expiryDate,
       daysRemaining,
+      totalContributions: investment.totalContributions ?? 0,
+      contributionStreak: investment.contributionStreak ?? 0,
+      networkSize: investment.networkSize ?? investment.totalReferrals ?? 0,
     };
   }
 
@@ -523,6 +570,60 @@ class InvestmentService {
       monthly,
       total,
     };
+  }
+
+  /**
+   * Get level rewards status for an investment
+   * Actual endpoint: GET /api/investment/levels-status/:investmentId
+   */
+  async getLevelsStatus(investmentId: string): Promise<{
+    investmentId: string;
+    userId: string;
+    planName: string;
+    planKey: string;
+    currentLevel: number;
+    activeLevel: number;
+    highestClaimedLevel: number;
+  levelSchemaVersion: number;
+    totalLevels: number;
+    elapsedDays: number;
+    totalReferrals: number;
+    startDate: string | null;
+    currentLevelInfo: any;
+    nextLevelInfo: any;
+    claimableLevelsCount: number;
+    claimableLevels: any[];
+    allLevels: any[];
+  }> {
+    const response = await apiCall<ApiResponse<any>>(
+      apiClient.get(`/investment/levels-status/${investmentId}`)
+    );
+    return response.data!;
+  }
+
+  /**
+   * Claim level rewards
+   * Actual endpoint: POST /api/investment/claim-level
+   */
+  async claimLevelRewards(data: {
+    investmentId: string;
+    levels: number[];
+  }): Promise<{
+    previousLevel: number;
+    newLevel: number;
+    levelsClaimed: number[];
+    totalReward: number;
+    newBalance: number;
+  }> {
+    const response = await apiCall<ApiResponse<any>>(
+      apiClient.post("/investment/claim-level", data),
+      {
+        showLoading: true,
+        showSuccess: true,
+        successMessage: "Level rewards claimed successfully!",
+      }
+    );
+    return response.data!;
   }
 }
 

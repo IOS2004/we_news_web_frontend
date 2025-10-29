@@ -14,6 +14,7 @@ import {
 import Card from '@/components/common/Card';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import Button from '@/components/common/Button';
+import LevelRewards from '@/components/LevelRewards';
 import investmentService, { type UserInvestment } from '@/services/investmentApi';
 import toast from 'react-hot-toast';
 
@@ -182,9 +183,9 @@ export default function PlanDetails() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 -mt-6">
+      <div className="max-w-5xl mx-auto px-4 -mt-6 space-y-6">
         {/* Total Earnings Card */}
-        <Card className="bg-white shadow-xl mb-6">
+        <Card className="bg-white shadow-xl">
           <div className="text-center py-6">
             <p className="text-gray-600 text-sm mb-2">Total Earnings from This Plan</p>
             <p className="text-5xl font-bold text-gray-900 mb-1">
@@ -197,7 +198,7 @@ export default function PlanDetails() {
           </div>
 
           {/* Earnings Breakdown */}
-          <div className="grid grid-cols-3 gap-4 pt-6 border-t border-gray-200">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6 border-t border-gray-200">
             <div className="text-center">
               <p className="text-gray-600 text-sm mb-1">Today</p>
               <p className="text-xl font-bold text-gray-900">
@@ -219,10 +220,16 @@ export default function PlanDetails() {
           </div>
         </Card>
 
+        {/* Level Rewards Section */}
+        <LevelRewards 
+          investmentId={investmentId!} 
+          onRewardsClaimed={loadInvestmentDetails}
+        />
+
         {/* Quick Actions */}
-        <Card className="mb-6">
+        <Card>
           <h2 className="text-xl font-bold text-gray-900 mb-4">Quick Actions</h2>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <button
               onClick={handleShare}
               className="flex items-center gap-3 p-4 bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl hover:shadow-md transition-all"
@@ -252,7 +259,7 @@ export default function PlanDetails() {
         </Card>
 
         {/* Investment Statistics */}
-        <div className="grid grid-cols-2 gap-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card>
             <div className="flex items-center gap-4">
               <div className="w-14 h-14 bg-green-100 rounded-xl flex items-center justify-center">
@@ -309,7 +316,7 @@ export default function PlanDetails() {
         </div>
 
         {/* Plan Details */}
-        <Card className="mb-6">
+        <Card>
           <h2 className="text-xl font-bold text-gray-900 mb-4">Plan Details</h2>
           <div className="space-y-3">
             <div className="flex justify-between items-center py-3 border-b border-gray-100">
@@ -345,12 +352,12 @@ export default function PlanDetails() {
 
         {/* Network Section */}
         {investment.networkSize !== undefined && investment.networkSize > 0 && (
-          <Card className="mb-6">
+          <Card>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-gray-900">Your Network</h2>
               <Button onClick={handleViewNetwork}>View Full Network</Button>
             </div>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="text-center p-4 bg-blue-50 rounded-lg">
                 <p className="text-sm text-gray-600 mb-1">Direct Referrals</p>
                 <p className="text-2xl font-bold text-blue-600">{investment.directReferrals || 0}</p>

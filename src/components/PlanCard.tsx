@@ -114,9 +114,14 @@ export default function PlanCard({ investment, isActive = false }: PlanCardProps
           
           <div className="flex justify-between items-center">
             <span className="text-sm text-gray-600">Level</span>
-            <span className="text-sm font-semibold text-gray-900">
-              Level {investment.currentLevel || 1}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-gray-900">
+                Level {investment.currentLevel || 0}
+              </span>
+              <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-bold rounded-full">
+                L{investment.currentLevel || 0}
+              </span>
+            </div>
           </div>
 
           <div className="flex justify-between items-center">
