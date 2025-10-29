@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import Button from '@/components/common/Button';
@@ -15,6 +15,16 @@ export default function SignIn() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Partial<LoginCredentials>>({});
+  const [hasReferral, setHasReferral] = useState(false);
+
+  useEffect(() => {
+    // Check if there's a pending referral
+    const pendingReferral = localStorage.getItem('pendingReferral');
+    const redirectUrl = localStorage.getItem('redirectAfterLogin');
+    if (pendingReferral && redirectUrl) {
+      setHasReferral(true);
+    }
+  }, []);
 
   const validate = (): boolean => {
     const newErrors: Partial<LoginCredentials> = {};
@@ -41,7 +51,15 @@ export default function SignIn() {
     try {
       setIsLoading(true);
       await login(formData);
-      navigate('/dashboard');
+      
+      // Check if there's a redirect URL saved
+      const redirectUrl = localStorage.getItem('redirectAfterLogin');
+      if (redirectUrl) {
+        localStorage.removeItem('redirectAfterLogin');
+        navigate(redirectUrl);
+      } else {
+        navigate('/dashboard');
+      }
     } catch (error) {
       // Error is handled by AuthContext
     } finally {
@@ -52,6 +70,14 @@ export default function SignIn() {
   return (
     <Card>
       <h2 className="text-2xl font-bold text-center mb-6">Sign In</h2>
+      
+      {hasReferral && (
+        <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+          <p className="text-sm text-green-800 text-center">
+            🎉 You're accessing a referral link! Sign in to view the recommended plan.
+          </p>
+        </div>
+      )}
       
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input
