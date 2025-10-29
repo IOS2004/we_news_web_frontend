@@ -5,6 +5,7 @@ import Card from '@/components/common/Card';
 import { formatCurrency } from '@/utils/helpers';
 import toast from 'react-hot-toast';
 import { useCart } from '@/hooks/useCart';
+import { useTradingSocket } from '@/hooks/useTradingSocket';
 import { CartSummaryBar } from '@/components/trading/CartSummaryBar';
 import { CartDrawer } from '@/components/trading/CartDrawer';
 import { RoundsList } from '@/components/trading/RoundsList';
@@ -66,6 +67,24 @@ export default function Trading() {
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Setup socket connection for real-time updates
+  useTradingSocket({
+    gameType: 'color',
+    onRoundFinalized: (data) => {
+      console.log('Result declared for round:', data.round.roundId);
+      // Refresh rounds to show updated status
+      fetchColorRounds();
+      // Refresh wallet to show winnings if user won
+      refreshWallet();
+    },
+    onRoundClosed: (round) => {
+      console.log('Round closed:', round.roundId);
+      // Refresh rounds to show closed status
+      fetchColorRounds();
+    },
+    enabled: true,
+  });
 
   // Initialize on mount - fetch rounds only if not already loaded
   useEffect(() => {
