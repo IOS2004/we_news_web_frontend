@@ -3,6 +3,7 @@ import { Wallet, DollarSign, Clock, CheckCircle, XCircle, Info, CreditCard, Buil
 import toast from "react-hot-toast";
 import { withdrawalService } from "@/services/withdrawalService";
 import type { WithdrawalRequest } from "@/types";
+import { useWallet } from "@/contexts/WalletContext";
 
 export default function Withdrawals() {
   const [activeTab, setActiveTab] = useState<"request" | "history">("request");
@@ -15,8 +16,15 @@ export default function Withdrawals() {
   const [withdrawalHistory, setWithdrawalHistory] = useState<WithdrawalRequest[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
 
-  const availableBalance = 1500; // TODO: Get from wallet context/API
+  // Use wallet context to get real balance
+  const { wallet, refreshWallet } = useWallet();
+  const availableBalance = wallet?.balance || 0;
   const minimumWithdrawal = 500;
+
+  // Fetch wallet balance on component mount
+  useEffect(() => {
+    refreshWallet();
+  }, [refreshWallet]);
 
   // Fetch withdrawal history
   useEffect(() => {
@@ -77,6 +85,8 @@ export default function Withdrawals() {
         setBankAccount("");
         setIfscCode("");
         setAccountHolderName("");
+        // Refresh wallet to get updated balance
+        await refreshWallet();
         setActiveTab("history");
       } else {
         toast.error(response.message || "Failed to submit withdrawal request");
